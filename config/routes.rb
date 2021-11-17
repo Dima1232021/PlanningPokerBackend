@@ -1,3 +1,6 @@
 Rails.application.routes.draw do
-  # For details on the DSL available within this file, see https://guides.rubyonrails.org/routing.html
+  post '/authenticate/login', to: 'authenticate#login'
+  post '/authenticate/create', to: 'authenticate#create'
+  get '/authenticate/logged_in:', to: 'authenticate#logged_in'
+  delete '/authenticate/logout', to: 'authenticate#logout'
 end
