@@ -15,7 +15,7 @@ class AuthenticateController < ApplicationController
         password_confirmation: password_confirmation,
       )
     session[:user_id] = user.id
-    render json: { status: :created, user: user }
+    render json: { status: :created, user: user, logged_in: true }
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.to_s, status: 400 }
   end
