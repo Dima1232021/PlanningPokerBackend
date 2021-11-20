@@ -3,9 +3,7 @@ class GameController < ApplicationController
 
   def index
     users = User.all
-    changedUsers =
-      users.map { |user| { username: user.username, userid: user.id } }
+    changedUsers = users.map { |user| { username: user.username, id: user.id } }
 
     render json: changedUsers
-  end
 end
