@@ -1,6 +1,4 @@
 class AuthenticateController < ApplicationController
-  include CurrentUserConcern
-
   def create
     username = params['user']['username']
     email = params['user']['email']

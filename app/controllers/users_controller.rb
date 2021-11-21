@@ -1,15 +1,15 @@
 class UsersController < ApplicationController
-  include CurrentUserConcern
-
   def index
     idCurrentUser = @current_user.id
 
-    # users = User.all.map { |user| { username: user.username, id: user.id } }
+    users = []
 
-    #   users = User.all.select { |user| idCurrentUser != user.id }
-    # users =
-    #   User.all.each { |user| mm.push({ username: user.username, id: user.id }) }
+    User.all.each do |user|
+      unless idCurrentUser == user.id
+        users.push({ username: user.username, id: user.id })
+      end
+    end
 
-    render json: { name: 'adsfasd' }
+    render json: users
   end
 end

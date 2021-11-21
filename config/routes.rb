@@ -3,7 +3,7 @@ Rails.application.routes.draw do
   post '/authenticate/create', to: 'authenticate#create'
 
   get '/authenticate/logged_in', to: 'authenticate#logged_in'
-  get '/new_game/users', to: 'game#index'
+  get '/users/show', to: 'users#index'
 
   delete '/authenticate/logout', to: 'authenticate#logout'
 

@@ -1,4 +1,6 @@
 class User < ApplicationRecord
+  include PgSearch
+
   has_many :invitation_to_the_games, dependent: :destroy
   has_many :games, through: :invitation_to_the_games
 
