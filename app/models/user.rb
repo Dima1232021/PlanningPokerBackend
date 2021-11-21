@@ -1,7 +1,4 @@
 class User < ApplicationRecord
-  include PgSearch
-  pg_search_scope :search_everywhere, against: [:username]
-
   has_many :invitation_to_the_games, dependent: :destroy
   has_many :games, through: :invitation_to_the_games
 
