@@ -4,9 +4,14 @@ class GameController < ApplicationController
   def index
     idCurrentUser = @current_user.id
 
-    # users = User.all.map { |user| { username: user.username, id: user.id } }
+    users = []
 
-    users = User.all.select { |user| idCurrentUser != user.id }
+    User.all.each do |user|
+      unless idCurrentUser == user.id
+        users.push({ username: user.username, id: user.id })
+      end
+    end
+
     render json: users
   end
 end
