@@ -3,8 +3,8 @@ class CreateGames < ActiveRecord::Migration[6.1]
     create_table :games do |t|
       t.string :name
       t.string :driving
-      t.string 'tags', array: true
-      
+      t.string :users, array: true
+
       t.timestamps
     end
   end
