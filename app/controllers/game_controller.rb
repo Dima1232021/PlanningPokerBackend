@@ -37,7 +37,12 @@ class GameController < ApplicationController
   end
 
   def deleteGame
-    game = params['game_id']
-    Game.find(game).destroy
+    Game.find(params['game_id']).destroy
+    render json: { status: 200, delete_game: true }
+  end
+
+  def deleteInvited
+    InvitationToTheGame.find(params['invitation_id']).destroy
+    render json: { status: 200, delete_invited: true }
   end
 end
