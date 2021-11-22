@@ -1,5 +1,4 @@
 class User < ApplicationRecord
-
   has_many :invitation_to_the_games, dependent: :destroy
   has_many :games, through: :invitation_to_the_games
 

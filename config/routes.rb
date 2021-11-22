@@ -9,6 +9,7 @@ Rails.application.routes.draw do
   get '/game/invited_games', to: 'game#invitedGames'
 
   delete '/authenticate/logout', to: 'authenticate#logout'
+  delete '/game/delete_game', to: 'game#deleteGame'
 
   mount ActionCable.server => '/cable'
 end

@@ -31,4 +31,9 @@ class GameController < ApplicationController
 
     render json: games
   end
+
+  def deleteGame
+    game = params['game_id']
+    Game.find(game).destroy
+  end
 end
