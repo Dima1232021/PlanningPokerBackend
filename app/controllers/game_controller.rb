@@ -1,12 +1,16 @@
 class GameController < ApplicationController
   def create
     username = params['name']
+    users = params['users']
+
     game = @current_user.games.create(name: username, driving: @current_user.id)
 
     invitation =
       InvitationToTheGame
         .where(user: @current_user.id, game: game.id)
         .update(invitation: true)
+
+    users.map { |user| game.users << User.find(user['id']) }
 
     render json: { status: :created, game: game, invitation: invitation }
   end
