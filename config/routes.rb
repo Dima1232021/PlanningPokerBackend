@@ -6,6 +6,7 @@ Rails.application.routes.draw do
   get '/authenticate/logged_in', to: 'authenticate#logged_in'
   get '/users/show', to: 'users#index'
   get '/game/your_games', to: 'game#yourGames'
+  get '/game/invited_games', to: 'game#invitedGames'
 
   delete '/authenticate/logout', to: 'authenticate#logout'
 
