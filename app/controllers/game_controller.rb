@@ -17,7 +17,18 @@ class GameController < ApplicationController
   end
 
   def invitedGames
-    games = InvitationToTheGame.where(user: @current_user.id, invitation: false)
+    games =
+      InvitationToTheGame
+        .where(user: @current_user.id, invitation: false)
+        .map do |inv|
+          game = Game.find(inv.game_id)
+          next {
+            invitation_id: inv.id,
+            game_id: inv.game_id,
+            game_name: game.name,
+          }
+        end
+
     render json: games
   end
 end
