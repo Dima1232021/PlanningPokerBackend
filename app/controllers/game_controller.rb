@@ -45,4 +45,35 @@ class GameController < ApplicationController
     InvitationToTheGame.find(params['invitation_id']).destroy
     render json: { status: 200, delete_invited: true }
   end
+
+  def joinTheGame
+    invitation = InvitationToTheGame.find(params['invitation_id'])
+    game = Game.find(params['game_id'])
+
+    invitation.update(invitation: true)
+
+    game.joined.push(
+      { user_id: @current_user.id, username: @current_user.username },
+    )
+    game.save!
+
+    render json: { status: 200, join_the_game: true }
+  end
+
+  def gamesYouHaveJoined
+    games = []
+
+    InvitationToTheGame
+      .where(user_id: @current_user.id, invitation: true)
+      .each do |inv|
+        game = Game.find(inv.game_id)
+
+        if game.driving != @current_user.id
+          next games.push(
+            { game_id: game.id, game_name: game.name, invitation_id: inv.id },
+          )
+        end
+      end
+    render json: games
+  end
 end

@@ -17,8 +17,8 @@ ActiveRecord::Schema.define(version: 2021_11_20_135757) do
 
   create_table "games", force: :cascade do |t|
     t.string "name"
-    t.string "driving"
-    t.string "users", array: true
+    t.integer "driving"
+    t.json "joined", default: [], array: true
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
   end

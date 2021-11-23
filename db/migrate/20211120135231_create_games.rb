@@ -2,8 +2,8 @@ class CreateGames < ActiveRecord::Migration[6.1]
   def change
     create_table :games do |t|
       t.string :name
-      t.string :driving
-      t.string :users, array: true
+      t.integer :driving
+      t.json :joined, array: true, default: []
 
       t.timestamps
     end
