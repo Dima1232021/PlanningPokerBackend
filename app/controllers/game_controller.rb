@@ -1,35 +1,56 @@
 class GameController < ApplicationController
   def create
-    username = params['name']
-    users = params['users']
+    name_game = params['nameGame']
+    users_joined = params['users']
+    stories = params['stories']
+    justDriving = params['justDriving']
 
-    game = @current_user.games.create(name: username, driving: @current_user.id)
+    game =
+      @current_user.games.create(
+        name_game: name_game,
+        driving_id: @current_user.id,
+      )
 
-    invitation =
-      InvitationToTheGame
-        .where(user: @current_user.id, game: game.id)
-        .update(invitation: true)
+    game.invitation_to_the_games.update(invitation: true)
 
-    users.map { |user| game.users << User.find(user['id']) }
+    unless justDriving
+      game.update(
+        users_joined: [
+          { username: @current_user.id, email: @current_user.email },
+        ],
+      )
+    end
 
-    render json: { status: :created, game: game, invitation: invitation }
+    users_joined.map do |user|
+      user = User.find(user['id'])
+      game.users << user
+      inv = InvitationToTheGame.where(user_id: user.id, game_id: game.id)[0]
+      ShowingGameRequestsChannel.broadcast_to user,
+                                              {
+                                                invitation_id: inv['id'],
+                                                game_id: game.id,
+                                                game_name: game.name_game,
+                                              }
+    end
+
+    render json: { status: :created, game: game }
   end
 
   def yourGames
-    games = Game.where(driving: @current_user.id)
+    games = Game.where(driving_id: @current_user.id)
     render json: games
   end
 
   def invitedGames
     games =
       InvitationToTheGame
-        .where(user: @current_user.id, invitation: false)
+        .where(user_id: @current_user.id, invitation: false)
         .map do |inv|
           game = Game.find(inv.game_id)
           next {
             invitation_id: inv.id,
             game_id: inv.game_id,
-            game_name: game.name,
+            game_name: game.name_game,
           }
         end
 
@@ -68,9 +89,13 @@ class GameController < ApplicationController
       .each do |inv|
         game = Game.find(inv.game_id)
 
-        if game.driving != @current_user.id
+        if game.driving_id != @current_user.id
           next games.push(
-            { game_id: game.id, game_name: game.name, invitation_id: inv.id },
+            {
+              game_id: game.id,
+              game_name: game.name_game,
+              invitation_id: inv.id,
+            },
           )
         end
       end
