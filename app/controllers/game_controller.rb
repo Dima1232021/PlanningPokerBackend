@@ -41,6 +41,11 @@ class GameController < ApplicationController
     render json: games
   end
 
+  def deleteGame
+    Game.find(params['game_id']).destroy
+    render json: { status: 200, delete_game: true }
+  end
+
   def invitedGames
     games =
       InvitationToTheGame
@@ -100,5 +105,10 @@ class GameController < ApplicationController
         end
       end
     render json: games
+  end
+
+  def deleteInvited
+    InvitationToTheGame.find(params['invitation_id']).destroy
+    render json: { status: 200, delete_invited: true }
   end
 end
