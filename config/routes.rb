@@ -8,7 +8,7 @@ Rails.application.routes.draw do
   get '/users/show', to: 'users#index'
   get '/game/your_games', to: 'game#yourGames'
   get '/game/invited_games', to: 'game#invitedGames'
-  get '/game/games_you_have_joined', to: 'game#gamesYouHaveJoined'
+  # get '/game/games_you_have_joined', to: 'game#gamesYouHaveJoined'
 
   delete '/authenticate/logout', to: 'authenticate#logout'
   delete '/game/delete_game', to: 'game#deleteGame'
