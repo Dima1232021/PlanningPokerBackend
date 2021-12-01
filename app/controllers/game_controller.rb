@@ -14,18 +14,19 @@ class GameController < ApplicationController
     # game.invitation_to_the_games.update(to_the_game: true)
 
     unless justDriving
-      game.update(
-        users: [
-          { user_id: @current_user.id, user_name: @current_user.username },
-        ],
+      game.players.push(
+        { user_id: @current_user.id, user_name: @current_user.username },
       )
     end
 
     users.map do |user|
       user = User.find(user['id'])
-      
+
       game.users << user
       inv = InvitationToTheGame.where(user_id: user.id, game_id: game.id)[0]
+
+      game.players.push({ user_id: user.id, user_name: user.username })
+      game.save!
       data = {
         invitation_id: inv['id'],
         game_id: game.id,
@@ -65,62 +66,87 @@ class GameController < ApplicationController
   end
 
   def invitedGames
-    games =
-      InvitationToTheGame
-        .where(user_id: @current_user.id)
-        .map do |inv|
-          game = Game.find(inv.game_id)
-          next {
-            invitation_id: inv.id,
-            game_id: inv.game_id,
-            game_name: game.name_game,
-          }
+    games = []
+
+    InvitationToTheGame
+      .where(user_id: @current_user.id)
+      .map do |inv|
+        game = Game.find(inv.game_id)
+        if game.driving_id != @current_user.id
+          games.push(
+            {
+              invitation_id: inv.id,
+              game_id: inv.game_id,
+              game_name: game.name_game,
+            },
+          )
         end
+      end
 
     render json: games
   end
 
   def joinTheGame
-    invitation = InvitationToTheGame.find(params['invitation_id'])
-    game = Game.find(params['game_id'])
+    invitationId = params['invitation_id']
+    gameId = params['game_id']
+
+    if !!invitationId
+      invitation = InvitationToTheGame.find(params['invitation_id'])
+    else
+      invitation =
+        InvitationToTheGame.where(game_id: gameId, user_id: @current_user.id)[0]
+    end
+
+    game = Game.find(gameId)
 
     if @current_user.id == invitation.user_id && game.id == invitation.game_id
-      invitation.update(invitation: true)
-      game.users_joined.push(
-        { user_id: @current_user.id, user_name: @current_user.username },
-      )
+      invitation.update(to_the_game: true)
+
+      game.users_joined.push(@current_user.id)
       game.save!
-      render json: { status: 200, join_the_game: true, game: game }
+      render json: {
+               join_the_game: true,
+               game: game,
+               invitation_id: invitation.id,
+             }
     else
-      render json: { status: 400, join_the_game: false }
+      render json: { join_the_game: false }
     end
   end
 
-  # def gamesYouHaveJoined
-  #   games = []
+  def searchGameYouHaveJoined
+    invitation =
+      InvitationToTheGame.where(user_id: @current_user, to_the_game: true)[0]
 
-  #   InvitationToTheGame
-  #     .where(user_id: @current_user.id, invitation: true)
-  #     .each do |inv|
-  #       game = Game.find(inv.game_id)
+    if !!invitation
+      game = Game.find(invitation.game_id)
+      render json: {
+               join_the_game: true,
+               game: game,
+               invitation_id: invitation.id,
+             }
+    else
+      render json: { join_the_game: false }
+    end
+  end
 
-  #       if game.driving_id != @current_user.id
-  #         next games.push(
-  #           {
-  #             game_id: game.id,
-  #             game_name: game.name_game,
-  #             invitation_id: inv.id,
-  #           },
-  #         )
-  #       end
-  #     end
-  #   render json: games
-  # end
+  def leaveTheGame
+    game = Game.find(params['game_id'])
+    invitation = InvitationToTheGame.find(params['invitation_id'])
 
-  def leaveTheGame; end
+    if (@current_user.id == invitation.user_id)
+      newUserJoined =
+        game.users_joined.select { |user_id| user_id != invitation.user_id }
+      invitation.update(to_the_game: false)
+      game.update(users_joined: newUserJoined)
+      render json: { leavet_he_game: true }
+    else
+      render json: { leavet_he_game: false }
+    end
+  end
 
   def deleteInvited
     InvitationToTheGame.find(params['invitation_id']).destroy
-    render json: { status: 200, delete_invited: true }
+    render json: { delete_invited: true }
   end
 end
