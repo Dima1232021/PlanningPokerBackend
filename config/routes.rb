@@ -14,6 +14,7 @@ Rails.application.routes.draw do
 
   delete '/authenticate/logout', to: 'authenticate#logout'
   delete '/game/delete_game', to: 'create_game#deleteGame'
+  delete '/game/delete_invited', to: 'create_game#deleteInvited'
 
   mount ActionCable.server => '/cable'
 end

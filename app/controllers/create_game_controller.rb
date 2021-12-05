@@ -8,7 +8,10 @@ class CreateGameController < ApplicationController
     game =
       @current_user.games.create(
         name_game: name_game,
-        driving_id: @current_user.id,
+        driving: {
+          user_id: @current_user.id,
+          user_name: @current_user.username,
+        },
       )
 
     unless justDriving
@@ -34,23 +37,27 @@ class CreateGameController < ApplicationController
       ShowingGameRequestsChannel.broadcast_to user, data
     end
 
+    stories.map { |story| game.stories.build(body: story).save }
+
     render json: { status: :created, game: game }
   end
 
   def yourGames
-    games = Game.where(driving_id: @current_user.id)
+    games = Game.where("driving->>'user_id' = '?'", @current_user.id)
+
     render json: games
   end
 
   def deleteGame
     game = Game.find(params['game_id'])
 
-    if game.driving_id == @current_user.id
+    if game.driving['user_id'] == @current_user.id
       InvitationToTheGame
         .where(game_id: params['game_id'])
         .map do |inv|
           user = User.find(inv['user_id'])
-          if (game.driving_id != user.id)
+
+          if (game.driving['user_id'] != user.id)
             DeleteInvitationChannel.broadcast_to user,
                                                  { invitation_id: inv['id'] }
           end
@@ -70,7 +77,7 @@ class CreateGameController < ApplicationController
       .where(user_id: @current_user.id)
       .map do |inv|
         game = Game.find(inv.game_id)
-        if game.driving_id != @current_user.id
+        if game.driving['user_id'] != @current_user.id
           games.push(
             {
               invitation_id: inv.id,
@@ -102,6 +109,7 @@ class CreateGameController < ApplicationController
 
       game.users_joined.push(@current_user.id)
       game.save!
+      ActionCable.server.broadcast "game_channel_#{gameId}", game
       render json: {
                join_the_game: true,
                game: game,
@@ -109,6 +117,40 @@ class CreateGameController < ApplicationController
              }
     else
       render json: { join_the_game: false }
+    end
+  end
+
+  def deleteInvited
+    invitation = InvitationToTheGame.find(params['invitation_id'])
+    gameId = invitation.game_id
+    game = Game.find(gameId)
+
+    if @current_user.id == invitation.user_id
+      plauers =
+        game.players.select { |user| user['user_id'] != invitation.user_id }
+      game.update(players: plauers)
+      invitation.destroy
+      ActionCable.server.broadcast "game_channel_#{gameId}", game
+      render json: { delete_invited: true }
+    else
+      render json: { delete_invited: false }
+    end
+  end
+
+  def leaveTheGame
+    gameId = params['game_id']
+    game = Game.find(gameId)
+    invitation = InvitationToTheGame.find(params['invitation_id'])
+
+    if (@current_user.id == invitation.user_id)
+      newUserJoined =
+        game.users_joined.select { |user_id| user_id != invitation.user_id }
+      invitation.update(to_the_game: false)
+      game.update(users_joined: newUserJoined)
+      ActionCable.server.broadcast "game_channel_#{gameId}", game
+      render json: { leavet_he_game: true }
+    else
+      render json: { leavet_he_game: false }
     end
   end
 
@@ -126,25 +168,5 @@ class CreateGameController < ApplicationController
     else
       render json: { join_the_game: false }
     end
-  end
-
-  def leaveTheGame
-    game = Game.find(params['game_id'])
-    invitation = InvitationToTheGame.find(params['invitation_id'])
-
-    if (@current_user.id == invitation.user_id)
-      newUserJoined =
-        game.users_joined.select { |user_id| user_id != invitation.user_id }
-      invitation.update(to_the_game: false)
-      game.update(users_joined: newUserJoined)
-      render json: { leavet_he_game: true }
-    else
-      render json: { leavet_he_game: false }
-    end
-  end
-
-  def deleteInvited
-    InvitationToTheGame.find(params['invitation_id']).destroy
-    render json: { delete_invited: true }
   end
 end

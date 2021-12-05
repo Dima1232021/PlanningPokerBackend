@@ -10,14 +10,23 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_11_20_135757) do
+ActiveRecord::Schema.define(version: 2021_12_04_125530) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
+  create_table "answers", force: :cascade do |t|
+    t.text "body"
+    t.bigint "story_id", null: false
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["story_id"], name: "index_answers_on_story_id"
+  end
+
   create_table "games", force: :cascade do |t|
     t.string "name_game"
     t.integer "driving_id"
+    t.json "driving", default: "{}", null: false
     t.integer "users_joined", default: [], array: true
     t.json "players", default: [], array: true
     t.datetime "created_at", precision: 6, null: false
@@ -34,6 +43,14 @@ ActiveRecord::Schema.define(version: 2021_11_20_135757) do
     t.index ["user_id"], name: "index_invitation_to_the_games_on_user_id"
   end
 
+  create_table "stories", force: :cascade do |t|
+    t.text "body"
+    t.bigint "game_id", null: false
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["game_id"], name: "index_stories_on_game_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "username"
     t.string "email"
@@ -42,6 +59,8 @@ ActiveRecord::Schema.define(version: 2021_11_20_135757) do
     t.datetime "updated_at", precision: 6, null: false
   end
 
+  add_foreign_key "answers", "stories"
   add_foreign_key "invitation_to_the_games", "games"
   add_foreign_key "invitation_to_the_games", "users"
+  add_foreign_key "stories", "games"
 end
