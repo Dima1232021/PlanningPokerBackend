@@ -27,7 +27,7 @@ ActiveRecord::Schema.define(version: 2021_12_04_125530) do
     t.string "name_game"
     t.integer "driving_id"
     t.json "driving", default: "{}", null: false
-    t.integer "users_joined", default: [], array: true
+    t.json "users_joined", default: [], array: true
     t.json "players", default: [], array: true
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false

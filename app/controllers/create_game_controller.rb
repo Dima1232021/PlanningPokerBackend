@@ -105,15 +105,19 @@ class CreateGameController < ApplicationController
     game = Game.find(gameId)
 
     if @current_user.id == invitation.user_id && game.id == invitation.game_id
+      stories = game.stories
       invitation.update(to_the_game: true)
-
-      game.users_joined.push(@current_user.id)
+      game.users_joined.push(
+        { user_id: @current_user.id, user_name: @current_user.username },
+      )
       game.save!
       ActionCable.server.broadcast "game_channel_#{gameId}", game
+
       render json: {
                join_the_game: true,
                game: game,
                invitation_id: invitation.id,
+               stories: stories,
              }
     else
       render json: { join_the_game: false }
@@ -144,7 +148,9 @@ class CreateGameController < ApplicationController
 
     if (@current_user.id == invitation.user_id)
       newUserJoined =
-        game.users_joined.select { |user_id| user_id != invitation.user_id }
+        game.users_joined.select do |user|
+          user['user_id'] != invitation.user_id
+        end
       invitation.update(to_the_game: false)
       game.update(users_joined: newUserJoined)
       ActionCable.server.broadcast "game_channel_#{gameId}", game
@@ -160,10 +166,12 @@ class CreateGameController < ApplicationController
 
     if !!invitation
       game = Game.find(invitation.game_id)
+      stories = game.stories
       render json: {
                join_the_game: true,
                game: game,
                invitation_id: invitation.id,
+               stories: stories,
              }
     else
       render json: { join_the_game: false }
