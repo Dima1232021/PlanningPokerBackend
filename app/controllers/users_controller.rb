@@ -1,11 +1,10 @@
 class UsersController < ApplicationController
-  def index
-    idCurrentUser = @current_user.id
+  def show
 
     users = []
 
     User.all.each do |user|
-      unless idCurrentUser == user.id
+      unless @current_user.id == user.id
         users.push({ username: user.username, id: user.id })
       end
     end

@@ -18,6 +18,7 @@ class CreateGameController < ApplicationController
       game.players.push(
         { user_id: @current_user.id, user_name: @current_user.username },
       )
+      game.save!
     end
 
     users.map do |user|
@@ -113,11 +114,21 @@ class CreateGameController < ApplicationController
       game.save!
       ActionCable.server.broadcast "game_channel_#{gameId}", game
 
+      answers = {}
+      stories.map do |story|
+        if game['selected_story'] && game['selected_story']['id']
+          answers[story.id] = []
+        else
+          answers[story.id] = story.answers
+        end
+      end
+
       render json: {
                join_the_game: true,
                game: game,
                invitation_id: invitation.id,
                stories: stories,
+               answers: answers,
              }
     else
       render json: { join_the_game: false }
@@ -167,14 +178,71 @@ class CreateGameController < ApplicationController
     if !!invitation
       game = Game.find(invitation.game_id)
       stories = game.stories
+      answers = {}
+      stories.map do |story|
+        if game['selected_story'] && game['selected_story']['id'] == story.id
+          answers[story.id] = []
+        else
+          answers[story.id] = story.answers
+        end
+      end
       render json: {
                join_the_game: true,
                game: game,
                invitation_id: invitation.id,
                stories: stories,
+               answers: answers,
              }
     else
       render json: { join_the_game: false }
     end
+  end
+
+  def startAPoll
+    storyId = params['storyId']
+    gameId = params['gameId']
+
+    story = Story.find(storyId)
+    game = Game.find(gameId)
+
+    game.update(selected_story: { id: story.id, body: story.body })
+    ActionCable.server.broadcast "game_channel_#{gameId}", game
+
+    render json: { selectedStory: true }
+  end
+
+  def finishAPoll
+    gameId = params['gameId']
+    game = Game.find(gameId)
+
+    if game.driving['user_id'] == @current_user.id
+      stories = game.stories
+      game.update(selected_story: {}, id_players_responded: [])
+      answers = {}
+      stories.map { |story| answers[story.id] = story.answers }
+      ActionCable.server.broadcast "answers_channel_#{gameId}",
+                                   { answers: answers, game: game }
+    end
+  end
+
+  def giveAnAnswer
+    fibonacci = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 'pass']
+    story = Story.find(params['storyId'])
+    game = Game.find(story.game_id)
+
+    if !!game.players.detect { |user| user['user_id'] == @current_user.id }
+      answer = Answer.find_by(story_id: story.id, user_id: @current_user.id)
+      if !answer
+        story.users << @current_user
+        answer = Answer.find_by(story_id: story.id, user_id: @current_user.id)
+      end
+      if fibonacci.include? params['answer']
+        answer.update(body: params['answer'])
+        game.id_players_responded.push(@current_user.id)
+        game.save!
+        ActionCable.server.broadcast "game_channel_#{story.game_id}", game
+      end
+    end
+    # render json: { giveAnAnswer: true }
   end
 end

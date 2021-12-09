@@ -13,8 +13,9 @@ class AuthenticateController < ApplicationController
         password_confirmation: password_confirmation,
       )
 
-    numberOfUsers = User.count
-    ActionCable.server.broadcast 'show_users_cannel', numberOfUsers
+    ActionCable.server.broadcast 'show_users_cannel',
+                                 { username: user.username, id: user.id }
+
     session[:user_id] = user.id
     render json: { status: :created, user: user, logged_in: true }
   rescue ActiveRecord::RecordInvalid => e
