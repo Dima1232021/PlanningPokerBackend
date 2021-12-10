@@ -243,6 +243,51 @@ class CreateGameController < ApplicationController
         ActionCable.server.broadcast "game_channel_#{story.game_id}", game
       end
     end
-    # render json: { giveAnAnswer: true }
+  end
+
+  def addHistory
+    gameId = params['gameId']
+    body = params['body']
+    game = Game.find(gameId)
+    if game.driving['user_id'] == @current_user.id
+      game.stories.build(body: body).save
+      stories = game.stories
+      answers = {}
+      stories.map { |story| answers[story.id] = story.answers }
+      ActionCable.server.broadcast "stories_channel_#{gameId}",
+                                   { stories: stories, answers: answers }
+    end
+  end
+
+  def editHistory
+    storyId = params['storyId']
+    gameId = params['gameId']
+    body = params['body']
+
+    story = Story.find(storyId)
+    game = Game.find(gameId)
+
+    if game.driving['user_id'] == @current_user.id
+      story.update(body: body)
+      stories = game.stories
+      ActionCable.server.broadcast "stories_channel_#{gameId}",
+                                   { stories: stories }
+    end
+  end
+
+  def deleteHistory
+    gameId = params['gameId']
+    storyId = params['storyId']
+    story = Story.find(storyId)
+    game = Game.find(gameId)
+
+    if game.driving['user_id'] == @current_user.id
+      story.destroy
+      stories = game.stories
+      answers = {}
+      stories.map { |story| answers[story.id] = story.answers }
+      ActionCable.server.broadcast "stories_channel_#{gameId}",
+                                   { stories: stories, answers: answers }
+    end
   end
 end

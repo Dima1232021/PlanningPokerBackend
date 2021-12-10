@@ -7,6 +7,8 @@ Rails.application.routes.draw do
   post '/game/start_a_poll', to: 'create_game#startAPoll'
   post '/game/finish_a_poll', to: 'create_game#finishAPoll'
   post '/game/give_an_answer', to: 'create_game#giveAnAnswer'
+  post '/game/add_history', to: 'create_game#addHistory'
+  post '/game/edit_history', to: 'create_game#editHistory'
 
   get '/authenticate/logged_in', to: 'authenticate#logged_in'
   get '/users/show', to: 'users#show'
@@ -18,6 +20,7 @@ Rails.application.routes.draw do
   delete '/authenticate/logout', to: 'authenticate#logout'
   delete '/game/delete_game', to: 'create_game#deleteGame'
   delete '/game/delete_invited', to: 'create_game#deleteInvited'
+  delete '/game/delete_history', to: 'create_game#deleteHistory'
 
   mount ActionCable.server => '/cable'
 end
