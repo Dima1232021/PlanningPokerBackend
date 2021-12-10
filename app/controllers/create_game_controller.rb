@@ -205,10 +205,15 @@ class CreateGameController < ApplicationController
     story = Story.find(storyId)
     game = Game.find(gameId)
 
-    game.update(selected_story: { id: story.id, body: story.body })
-    ActionCable.server.broadcast "game_channel_#{gameId}", game
-
-    render json: { selectedStory: true }
+    if game.driving['user_id'] == @current_user.id
+      game.update(selected_story: { id: story.id, body: story.body })
+      story.answers.destroy_all
+      stories = game.stories
+      answers = {}
+      stories.map { |story| answers[story.id] = story.answers }
+      ActionCable.server.broadcast "answers_channel_#{gameId}",
+                                   { answers: answers, game: game }
+    end
   end
 
   def finishAPoll
