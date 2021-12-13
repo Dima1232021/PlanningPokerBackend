@@ -1,12 +1,9 @@
 class UsersController < ApplicationController
   def show
-
     users = []
 
     User.all.each do |user|
-      unless @current_user.id == user.id
-        users.push({ username: user.username, id: user.id })
-      end
+      users.push({ username: user.username, id: user.id }) unless @current_user.id == user.id
     end
 
     render json: users

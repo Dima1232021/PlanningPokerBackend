@@ -10,7 +10,7 @@ class AuthenticateController < ApplicationController
         username: username,
         email: email,
         password: password,
-        password_confirmation: password_confirmation,
+        password_confirmation: password_confirmation
       )
 
     ActionCable.server.broadcast 'show_users_cannel',

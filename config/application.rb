@@ -28,7 +28,7 @@ module Backend
     config.middleware.insert_after(
       ActionDispatch::Cookies,
       ActionDispatch::Session::CookieStore,
-      key: '_authentication_app',
+      key: '_authentication_app'
     )
 
     # config.hosts << 'devserver.test'
