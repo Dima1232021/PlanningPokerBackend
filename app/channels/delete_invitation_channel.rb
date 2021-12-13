@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class DeleteInvitationChannel < ApplicationCable::Channel
   def subscribed
     user = User.find(params[:user])

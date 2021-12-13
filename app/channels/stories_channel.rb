@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class StoriesChannel < ApplicationCable::Channel
   def subscribed
     game_id = params['game_id']

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ShowingGameRequestsChannel < ApplicationCable::Channel
   def subscribed
     user = User.find(params[:user])

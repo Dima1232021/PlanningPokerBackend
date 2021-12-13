@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 Rails.application.routes.draw do
   post '/authenticate/login', to: 'authenticate#login'
   post '/authenticate/create', to: 'authenticate#create'

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class AuthenticateController < ApplicationController
   def create
     username = params['user']['username']

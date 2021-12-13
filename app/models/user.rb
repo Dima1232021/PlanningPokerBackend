@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class User < ApplicationRecord
   has_many :answers, dependent: :destroy
   has_many :stories, through: :answers
