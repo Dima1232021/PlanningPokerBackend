@@ -144,11 +144,7 @@ class GameController < ApplicationController
     game = Game.find(gameId)
 
     if @current_user.id == invitation.user_id
-      plauers =
-        game.players.reject { |user| user['user_id'] == invitation.user_id }
-      game.update(players: plauers)
       invitation.destroy
-      ActionCable.server.broadcast "game_channel_#{gameId}", game
       render json: { delete_invited: true }
     else
       render json: { delete_invited: false }

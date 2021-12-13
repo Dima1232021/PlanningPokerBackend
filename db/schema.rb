@@ -47,7 +47,7 @@ ActiveRecord::Schema.define(version: 2021_12_08_112715) do
   end
 
   create_table "stories", force: :cascade do |t|
-    t.text "body"
+    t.text "body", null: false
     t.bigint "game_id", null: false
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
