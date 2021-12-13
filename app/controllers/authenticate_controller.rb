@@ -19,32 +19,20 @@ class AuthenticateController < ApplicationController
     session[:user_id] = user.id
     render json: { status: :created, user: user, logged_in: true }
   rescue ActiveRecord::RecordInvalid => e
-    render json: { error: e.to_s, status: 400 }
+    render json: { error: e.to_s }
   end
 
   def login
     email = params['user']['email']
     password = params['user']['password']
 
-    if email.length === 0 || password.length === 0
-      return(
-        render json: {
-                 status: 400,
-                 message: 'Email or Password cannot be blank',
-               }
-      )
-    end
-
-    user = User.find_by(email: email).try(:authenticate, password)
+    user = User.find_by!(email: email).try(:authenticate, password)
 
     if user
       session[:user_id] = user.id
       render json: { status: :created, logged_in: true, user: user }
     else
-      render json: {
-               status: 400,
-               message: 'Validation failed: invalid login or password',
-             }
+      render json: { error: 'Validation failed: invalid login or password' }
     end
   end
 
