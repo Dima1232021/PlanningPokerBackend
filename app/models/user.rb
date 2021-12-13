@@ -6,7 +6,7 @@ class User < ApplicationRecord
   has_many :games, through: :invitation_to_the_games
 
   has_secure_password
-
+  validates :password, length: { minimum: 6, maximum: 16 }, on: :create
   validates :username,
             presence: true,
             uniqueness: {
