@@ -22,8 +22,10 @@ default: &default
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   # username: <%= ENV.fetch('DB_USERNAME') %>
   # password: <%= ENV.fetch('DB_PASSWORD') %>
-  # host: localhost
-  # port: 5432
+  username: "atom"
+  password: 1234
+  host: localhost
+  port: 5432
 
 development:
   <<: *default
@@ -85,6 +87,9 @@ test:
 #
 production:
   <<: *default
-  database: backend_development
-  username: 'atom'
+  database:
+    backend_development
+    # username: <%= ENV.fetch('DB_USERNAME') %>
+  # password: <%= ENV.fetch('DB_PASSWORD') %>
+  username: "atom"
   password: 1234
