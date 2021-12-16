@@ -26,12 +26,19 @@ module Backend
     config.middleware.use ActionDispatch::Cookies
     config.middleware.use ActionDispatch::Session::CookieStore,
                           key: '_authentication_app',
-                          expire_after: 20.years
-    config.middleware.insert_after(
-      ActionDispatch::Cookies,
-      ActionDispatch::Session::CookieStore,
-      key: '_authentication_app'
-    )
+                          path: '/',
+                          expire_after: 20.years,
+                          same_site: :None,
+                          secure: true
+
+    # config.middleware.insert_after(
+    #   ActionDispatch::Cookies,
+    #   ActionDispatch::Session::CookieStore,
+    #   key: '_authentication_app',
+    #   path: '/',
+    #   same_site: :None,
+    #   secure: true,
+    # )
 
     # config.hosts << 'devserver.test'
   end
