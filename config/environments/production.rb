@@ -43,7 +43,7 @@ Rails.application.configure do
     'https://planning-poker-backend-atom.herokuapp.com'
   ]
   config.web_socket_server_url =
-    'wss://planning-poker-backend-atom.herokuapp.com//cable'
+    'wss://planning-poker-backend-atom.herokuapp.com/cable'
 
   # Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
   # config.force_ssl = true
