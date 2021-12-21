@@ -207,14 +207,11 @@ class GameController < ApplicationController
     story = Story.find(storyId)
     game = Game.find(gameId)
 
-    if game.driving['user_id'] == @current_user.id
+    answers = story.answers.length
+
+    if game.driving['user_id'] == @current_user.id && answers == 0
       game.update(selected_story: { id: story.id, body: story.body })
-      story.answers.destroy_all
-      stories = game.stories
-      answers = {}
-      stories.map { |story| answers[story.id] = story.answers }
-      ActionCable.server.broadcast "answers_channel_#{gameId}",
-                                   { answers: answers, game: game }
+      ActionCable.server.broadcast "game_channel_#{story.game_id}", game
     end
   end
 
