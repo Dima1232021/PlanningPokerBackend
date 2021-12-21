@@ -16,6 +16,8 @@ class GameController < ApplicationController
         },
       )
 
+    game.build_timer.save
+
     unless justDriving
       game.players.push(
         { user_id: @current_user.id, user_name: @current_user.username },

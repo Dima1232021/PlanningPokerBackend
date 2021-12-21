@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_12_08_112715) do
+ActiveRecord::Schema.define(version: 2021_12_20_165348) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -54,6 +54,15 @@ ActiveRecord::Schema.define(version: 2021_12_08_112715) do
     t.index ["game_id"], name: "index_stories_on_game_id"
   end
 
+  create_table "timers", force: :cascade do |t|
+    t.boolean "timer", default: true
+    t.integer "timer_time"
+    t.bigint "game_id", null: false
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["game_id"], name: "index_timers_on_game_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "username"
     t.string "email"
@@ -67,4 +76,5 @@ ActiveRecord::Schema.define(version: 2021_12_08_112715) do
   add_foreign_key "invitation_to_the_games", "games"
   add_foreign_key "invitation_to_the_games", "users"
   add_foreign_key "stories", "games"
+  add_foreign_key "timers", "games"
 end

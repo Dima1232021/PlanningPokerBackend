@@ -9,6 +9,7 @@ class CreateGames < ActiveRecord::Migration[6.1]
       t.json :players, array: true, default: []
       t.json :selected_story, null: false, default: {}
       t.integer :id_players_responded, array: true, default: []
+ 
 
       t.timestamps
     end
