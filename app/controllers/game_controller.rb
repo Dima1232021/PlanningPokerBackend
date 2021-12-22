@@ -51,8 +51,7 @@ class GameController < ApplicationController
     if game.driving['user_id'] == @current_user.id
       game.invitation_to_the_games.each do |inv|
         if game.driving['user_id'] != inv.user_id
-          ActionCable
-            .server.broadcast "delete_invitation_channel_#{inv.user_id}",
+          ActionCable.server.broadcast "delete_game_channel_#{inv.user_id}",
                                        { invitation_id: inv['id'] }
         end
       end
@@ -92,16 +91,23 @@ class GameController < ApplicationController
       InvitationToTheGame.find_by(game_id: gameId, user_id: @current_user.id)
 
     game = Game.find(gameId)
-
     stories = game.stories
-    invitation.update(join_the_Game: true)
+    invitation.update(join_the_game: true)
 
-    # game.users_joined.push(
-    #   { user_id: @current_user.id, user_name: @current_user.username },
-    # )
-    # game.save!
+    invitedPlayers = game.users.select('users.id, users.username')
 
-    # ActionCable.server.broadcast "game_channel_#{gameId}", game
+    playersOnline =
+      User
+        .select('users.id, users.username')
+        .joins(:invitation_to_the_games)
+        .where(
+          'invitation_to_the_games.game_id = ? AND invitation_to_the_games.join_the_game = ?',
+          gameId,
+          true,
+        )
+
+    ActionCable.server.broadcast "change_players_online_channel_#{gameId}",
+                                 playersOnline
 
     answers = {}
     stories.map { |story| answers[story.id] = story.answers }
@@ -112,6 +118,8 @@ class GameController < ApplicationController
              invitation_id: invitation.id,
              stories: stories,
              answers: answers,
+             invited_players: invitedPlayers,
+             playerso_online: playersOnline,
            }
   rescue ActiveRecord::RecordNotFound
     render json: { join_the_game: false }
@@ -124,6 +132,12 @@ class GameController < ApplicationController
 
     if @current_user.id == invitation.user_id
       invitation.destroy
+
+      invitedPlayers =
+        game.users.map { |user| { user_id: user.id, user_name: user.username } }
+      playersOnline =
+        InvitationToTheGame.where(game_id: gameId, join_the_game: true)
+
       render json: { delete_invited: true }
     else
       render json: { delete_invited: false }
@@ -136,14 +150,20 @@ class GameController < ApplicationController
     invitation = InvitationToTheGame.find(params['invitation_id'])
 
     if @current_user.id == invitation.user_id
-      # newUserJoined =
-      #   game.users_joined.reject do |user|
-      #     user['user_id'] == invitation.user_id
-      #   end
-      invitation.update(join_the_Game: false)
+      invitation.update(join_the_game: false)
+      playersOnline =
+        User
+          .select('users.id, users.username')
+          .joins(:invitation_to_the_games)
+          .where(
+            'invitation_to_the_games.game_id = ? AND invitation_to_the_games.join_the_game = ?',
+            gameId,
+            true,
+          )
 
-      # game.update(users_joined: newUserJoined)
-      # ActionCable.server.broadcast "game_channel_#{gameId}", game
+      ActionCable.server.broadcast "change_players_online_channel_#{gameId}",
+                                   playersOnline
+
       render json: { leavet_he_game: true }
     else
       render json: { leavet_he_game: false }
@@ -152,11 +172,22 @@ class GameController < ApplicationController
 
   def searchGameYouHaveJoined
     invitation =
-      InvitationToTheGame.find_by(user_id: @current_user, join_the_Game: true)
+      InvitationToTheGame.find_by(user_id: @current_user, join_the_game: true)
 
     game = Game.find(invitation.game_id)
-    invitedPlayers =
-      game.users.map { |user| { user_id: user.id, user_name: user.username } }
+
+    invitedPlayers = game.users.select('users.id, users.username')
+
+    playersOnline =
+      User
+        .select('users.id, users.username')
+        .joins(:invitation_to_the_games)
+        .where(
+          'invitation_to_the_games.game_id = ? AND invitation_to_the_games.join_the_game = ?',
+          gameId,
+          true,
+        )
+
     stories = game.stories
     answers = {}
     stories.map do |story|
@@ -173,7 +204,8 @@ class GameController < ApplicationController
              invitation_id: invitation.id,
              stories: stories,
              answers: answers,
-             invitedPlayers: invitedPlayers,
+             invited_players: invitedPlayers,
+             playerso_online: playersOnline,
            }
   rescue ActiveRecord::RecordNotFound
     render json: { join_the_game: false }

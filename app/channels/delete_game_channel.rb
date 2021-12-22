@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-class DeleteInvitationChannel < ApplicationCable::Channel
+class DeleteGameChannel < ApplicationCable::Channel
   def subscribed
     user_id = params['userid']
-    stream_from "delete_invitation_channel_#{user_id}"
+    stream_from "delete_game_channel_#{user_id}"
   end
 
   def unsubscribed
