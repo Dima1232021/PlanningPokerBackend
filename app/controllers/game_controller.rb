@@ -13,10 +13,9 @@ class GameController < ApplicationController
         driving: {
           user_id: @current_user.id,
           user_name: @current_user.username,
+          player: !justDriving,
         },
       )
-
-    game.build_timer.save
 
     unless justDriving
       game.players.push(
@@ -57,21 +56,18 @@ class GameController < ApplicationController
     game = Game.find(params['game_id'])
 
     if game.driving['user_id'] == @current_user.id
-      InvitationToTheGame
-        .where(game_id: params['game_id'])
-        .map do |inv|
-          user = User.find(inv['user_id'])
-
-          if game.driving['user_id'] != user.id
-            DeleteInvitationChannel.broadcast_to user,
-                                                 { invitation_id: inv['id'] }
-          end
+      game.invitation_to_the_games.each do |inv|
+        if game.driving['user_id'] != inv.user_id
+          ActionCable
+            .server.broadcast "delete_invitation_channel_#{inv.user_id}",
+                                       { invitation_id: inv['id'] }
         end
+      end
 
       game.destroy
-      render json: { status: 200, delete_game: true }
+      render json: { delete_game: true }
     else
-      render json: { status: 400, delete_game: false }
+      render json: { delete_game: false }
     end
   end
 
@@ -97,47 +93,34 @@ class GameController < ApplicationController
   end
 
   def joinTheGame
-    invitationId = params['invitation_id']
     gameId = params['game_id']
 
     invitation =
-      if invitationId.nil?
-        InvitationToTheGame.where(game_id: gameId, user_id: @current_user.id)[0]
-      else
-        InvitationToTheGame.find(params['invitation_id'])
-      end
+      InvitationToTheGame.find_by!(game_id: gameId, user_id: @current_user.id)
 
     game = Game.find(gameId)
 
-    if @current_user.id == invitation.user_id && game.id == invitation.game_id
-      stories = game.stories
-      invitation.update(to_the_game: true)
-      game.users_joined.push(
-        { user_id: @current_user.id, user_name: @current_user.username },
-      )
-      game.save!
-      ActionCable.server.broadcast "game_channel_#{gameId}", game
+    stories = game.stories
+    invitation.update(to_the_game: true)
+    game.users_joined.push(
+      { user_id: @current_user.id, user_name: @current_user.username },
+    )
+    game.save!
 
-      answers = {}
-      stories.map do |story|
-        answers[story.id] =
-          if game['selected_story'] && game['selected_story']['id']
-            []
-          else
-            story.answers
-          end
-      end
+    ActionCable.server.broadcast "game_channel_#{gameId}", game
 
-      render json: {
-               join_the_game: true,
-               game: game,
-               invitation_id: invitation.id,
-               stories: stories,
-               answers: answers,
-             }
-    else
-      render json: { join_the_game: false }
-    end
+    answers = {}
+    stories.map { |story| answers[story.id] = story.answers }
+
+    render json: {
+             join_the_game: true,
+             game: game,
+             invitation_id: invitation.id,
+             stories: stories,
+             answers: answers,
+           }
+  rescue ActiveRecord::RecordNotFound
+    render json: { join_the_game: false }
   end
 
   def deleteInvited
@@ -215,7 +198,7 @@ class GameController < ApplicationController
     end
   end
 
-  def finishAPoll
+  def flipCard
     gameId = params['gameId']
     game = Game.find(gameId)
 
@@ -234,39 +217,39 @@ class GameController < ApplicationController
     story = Story.find(params['storyId'])
     game = Game.find(story.game_id)
 
-    playersOnline =
-      game
-        .users_joined
-        .each_with_object([]) do |user, newArr|
-          game.players.each do |value|
-            newArr << user if user['user_id'] == value['user_id']
-          end
-        end
+    # playersOnline =
+    #   game
+    #     .users_joined
+    #     .each_with_object([]) do |user, newArr|
+    #       game.players.each do |value|
+    #         newArr << user if user['user_id'] == value['user_id']
+    #       end
+    #     end
 
-    unless game
-             .players
-             .detect { |user| user['user_id'] == @current_user.id }
-             .nil?
-      story.users << @current_user
-      answer = Answer.find_by(story_id: story.id, user_id: @current_user.id)
+    # unless game
+    #          .players
+    #          .detect { |user| user['user_id'] == @current_user.id }
+    #          .nil?
+    #   story.users << @current_user
+    #   answer = Answer.find_by(story_id: story.id, user_id: @current_user.id)
 
-      if fibonacci.include? params['answer']
-        answer.update(body: params['answer'])
-        game.id_players_responded.push(@current_user.id)
-        game.save!
+    #   if fibonacci.include? params['answer']
+    #     answer.update(body: params['answer'])
+    #     game.id_players_responded.push(@current_user.id)
+    #     game.save!
 
-        if game.id_players_responded.length == playersOnline.length
-          game.update(selected_story: {}, id_players_responded: [])
-          stories = game.stories
-          answers = {}
-          stories.map { |story| answers[story.id] = story.answers }
-          ActionCable.server.broadcast "answers_channel_#{story.game_id}",
-                                       { answers: answers, game: game }
-        else
-          ActionCable.server.broadcast "game_channel_#{story.game_id}", game
-        end
-      end
-    end
+    #     if game.id_players_responded.length == playersOnline.length
+    #       game.update(selected_story: {}, id_players_responded: [])
+    #       stories = game.stories
+    #       answers = {}
+    #       stories.map { |story| answers[story.id] = story.answers }
+    #       ActionCable.server.broadcast "answers_channel_#{story.game_id}",
+    #                                    { answers: answers, game: game }
+    #     else
+    #       ActionCable.server.broadcast "game_channel_#{story.game_id}", game
+    #     end
+    #   end
+    # end
   end
 
   def addHistory
@@ -312,6 +295,27 @@ class GameController < ApplicationController
       stories.map { |story| answers[story.id] = story.answers }
       ActionCable.server.broadcast "stories_channel_#{gameId}",
                                    { stories: stories, answers: answers }
+    end
+  end
+
+  def changeHostSettings
+    gameId = params['gameId']
+    play = params['play']
+
+    game = Game.find(gameId)
+
+    if game.driving['user_id'] == @current_user.id
+      if play
+        game.players.push(
+          { user_id: @current_user.id, user_name: @current_user.username },
+        )
+      else
+        game.players.delete_if do |player|
+          player['user_id'] == @current_user.id
+        end
+      end
+      game.save!
+      ActionCable.server.broadcast "game_channel_#{story.game_id}", game
     end
   end
 end

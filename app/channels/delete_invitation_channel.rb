@@ -2,8 +2,8 @@
 
 class DeleteInvitationChannel < ApplicationCable::Channel
   def subscribed
-    user = User.find(params[:user])
-    stream_for user
+    user_id = params['userid']
+    stream_from "delete_invitation_channel_#{user_id}"
   end
 
   def unsubscribed
