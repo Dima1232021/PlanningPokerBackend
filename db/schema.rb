@@ -39,7 +39,7 @@ ActiveRecord::Schema.define(version: 2021_12_08_112715) do
   create_table "invitation_to_the_games", force: :cascade do |t|
     t.bigint "user_id", null: false
     t.bigint "game_id", null: false
-    t.boolean "to_the_game", default: false
+    t.boolean "join_the_Game", default: false
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
     t.index ["game_id"], name: "index_invitation_to_the_games_on_game_id"

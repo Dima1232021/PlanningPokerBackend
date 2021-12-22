@@ -11,6 +11,7 @@ Rails.application.routes.draw do
   post '/game/give_an_answer', to: 'game#giveAnAnswer'
   post '/game/add_history', to: 'game#addHistory'
   post '/game/edit_history', to: 'game#editHistory'
+  post '/game/change_host_settings', to: 'game#changeHostSettings'
 
   get '/authenticate/logged_in', to: 'authenticate#logged_in'
   get '/users/show', to: 'users#show'
