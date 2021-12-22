@@ -184,7 +184,7 @@ class GameController < ApplicationController
         .joins(:invitation_to_the_games)
         .where(
           'invitation_to_the_games.game_id = ? AND invitation_to_the_games.join_the_game = ?',
-          gameId,
+          game.id,
           true,
         )
 
