@@ -119,7 +119,7 @@ class GameController < ApplicationController
              stories: stories,
              answers: answers,
              invited_players: invitedPlayers,
-             playerso_online: playersOnline,
+             players_online: playersOnline,
            }
   rescue ActiveRecord::RecordNotFound
     render json: { join_the_game: false }
@@ -137,6 +137,12 @@ class GameController < ApplicationController
         game.users.map { |user| { user_id: user.id, user_name: user.username } }
       playersOnline =
         InvitationToTheGame.where(game_id: gameId, join_the_game: true)
+
+      ActionCable.server.broadcast "delete_invited_channel_#{gameId}",
+                                   {
+                                     invited_players: invitedPlayers,
+                                     players_online: playersOnline,
+                                   }
 
       render json: { delete_invited: true }
     else
@@ -172,7 +178,7 @@ class GameController < ApplicationController
 
   def searchGameYouHaveJoined
     invitation =
-      InvitationToTheGame.find_by(user_id: @current_user, join_the_game: true)
+      InvitationToTheGame.find_by!(user_id: @current_user, join_the_game: true)
 
     game = Game.find(invitation.game_id)
 
@@ -205,7 +211,7 @@ class GameController < ApplicationController
              stories: stories,
              answers: answers,
              invited_players: invitedPlayers,
-             playerso_online: playersOnline,
+             players_online: playersOnline,
            }
   rescue ActiveRecord::RecordNotFound
     render json: { join_the_game: false }
