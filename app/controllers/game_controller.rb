@@ -13,9 +13,12 @@ class GameController < ApplicationController
         driving: {
           user_id: @current_user.id,
           user_name: @current_user.username,
-          player: !justDriving,
         },
       )
+
+    InvitationToTheGame
+      .find_by(user_id: @current_user.id, game_id: game.id)
+      .update(player: !justDriving)
 
     users.map do |user|
       user = User.find(user['id'])
@@ -98,11 +101,11 @@ class GameController < ApplicationController
 
     playersOnline =
       User
-        .select('users.id, users.username')
+        .select('users.id, users.username, invitation_to_the_games.player')
         .joins(:invitation_to_the_games)
         .where(
           'invitation_to_the_games.game_id = ? AND invitation_to_the_games.join_the_game = ?',
-          gameId,
+          game.id,
           true,
         )
 
@@ -110,7 +113,7 @@ class GameController < ApplicationController
                                  playersOnline
 
     answers = {}
-    stories.map { |story| answers[story.id] = story.answers }
+    stories.map { |story| answers[story.id] = game.poll ? [] : story.answers }
 
     render json: {
              join_the_game: true,
@@ -133,10 +136,17 @@ class GameController < ApplicationController
     if @current_user.id == invitation.user_id
       invitation.destroy
 
-      invitedPlayers =
-        game.users.map { |user| { user_id: user.id, user_name: user.username } }
+      invitedPlayers = game.users.select('users.id, users.username')
+
       playersOnline =
-        InvitationToTheGame.where(game_id: gameId, join_the_game: true)
+        User
+          .select('users.id, users.username, invitation_to_the_games.player')
+          .joins(:invitation_to_the_games)
+          .where(
+            'invitation_to_the_games.game_id = ? AND invitation_to_the_games.join_the_game = ?',
+            game.id,
+            true,
+          )
 
       ActionCable.server.broadcast "delete_invited_channel_#{gameId}",
                                    {
@@ -159,7 +169,7 @@ class GameController < ApplicationController
       invitation.update(join_the_game: false)
       playersOnline =
         User
-          .select('users.id, users.username')
+          .select('users.id, users.username, invitation_to_the_games.player')
           .joins(:invitation_to_the_games)
           .where(
             'invitation_to_the_games.game_id = ? AND invitation_to_the_games.join_the_game = ?',
@@ -186,7 +196,7 @@ class GameController < ApplicationController
 
     playersOnline =
       User
-        .select('users.id, users.username')
+        .select('users.id, users.username, invitation_to_the_games.player')
         .joins(:invitation_to_the_games)
         .where(
           'invitation_to_the_games.game_id = ? AND invitation_to_the_games.join_the_game = ?',
@@ -196,14 +206,7 @@ class GameController < ApplicationController
 
     stories = game.stories
     answers = {}
-    stories.map do |story|
-      answers[story.id] =
-        if game['selected_story'] && game['selected_story']['id'] == story.id
-          []
-        else
-          story.answers
-        end
-    end
+    stories.map { |story| answers[story.id] = game.poll ? [] : story.answers }
     render json: {
              join_the_game: true,
              game: game,
@@ -227,7 +230,7 @@ class GameController < ApplicationController
     answers = story.answers.length
 
     if game.driving['user_id'] == @current_user.id && answers == 0
-      game.update(selected_story: { id: story.id, body: story.body })
+      game.update(history_poll: { id: story.id, body: story.body }, poll: true)
       ActionCable.server.broadcast "game_channel_#{story.game_id}", game
     end
   end
@@ -237,7 +240,7 @@ class GameController < ApplicationController
     game = Game.find(gameId)
 
     if game.driving['user_id'] == @current_user.id
-      game.update(selected_story: {}, id_players_responded: [])
+      game.update(history_poll: {}, poll: false)
       stories = game.stories
       answers = {}
       stories.map { |story| answers[story.id] = story.answers }
@@ -335,22 +338,29 @@ class GameController < ApplicationController
   def changeHostSettings
     gameId = params['gameId']
 
-    game = Game.find(gameId)
+    game = Game.find!(gameId)
 
-    play = game.driving['player']
+    invitation =
+      InvitationToTheGame.find_by!(
+        game_id: gameId,
+        user_id: @current_user.id.id,
+      )
+
+    player = invitation.player
 
     if game.driving['user_id'] == @current_user.id
-      if play
-        game.players.push(
-          { user_id: @current_user.id, user_name: @current_user.username },
-        )
-      else
-        game.players.delete_if do |player|
-          player['user_id'] == @current_user.id
-        end
-      end
-      game.save!
-      ActionCable.server.broadcast "game_channel_#{story.game_id}", game
+      invitation.update(player: !player)
+      playersOnline =
+        User
+          .select('users.id, users.username, invitation_to_the_games.player')
+          .joins(:invitation_to_the_games)
+          .where(
+            'invitation_to_the_games.game_id = ? AND invitation_to_the_games.join_the_game = ?',
+            game.id,
+            true,
+          )
+      ActionCable.server.broadcast "change_players_online_channel_#{gameId}",
+                                   playersOnline
     end
   end
 end

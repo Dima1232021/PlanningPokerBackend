@@ -28,10 +28,9 @@ ActiveRecord::Schema.define(version: 2021_12_08_112715) do
   create_table "games", force: :cascade do |t|
     t.string "name_game"
     t.json "driving", default: {}, null: false
-    t.json "users_joined", default: [], array: true
-    t.json "players", default: [], array: true
-    t.json "selected_story", default: {}, null: false
-    t.integer "id_players_responded", default: [], array: true
+    t.json "history_poll", default: {}, null: false
+    t.integer "id_players_answers", default: [], array: true
+    t.boolean "poll", default: false
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
   end
@@ -40,6 +39,7 @@ ActiveRecord::Schema.define(version: 2021_12_08_112715) do
     t.bigint "user_id", null: false
     t.bigint "game_id", null: false
     t.boolean "join_the_game", default: false
+    t.boolean "player", default: true
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
     t.index ["game_id"], name: "index_invitation_to_the_games_on_game_id"
