@@ -19,6 +19,10 @@ ActiveRecord::Schema.define(version: 2021_12_08_112715) do
     t.text "body"
     t.bigint "story_id", null: false
     t.bigint "user_id", null: false
+<<<<<<< HEAD
+=======
+    t.string "user_name"
+>>>>>>> 97c70a4... зміни в контролері, роутах , міграція
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
     t.index ["story_id"], name: "index_answers_on_story_id"

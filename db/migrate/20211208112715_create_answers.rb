@@ -6,6 +6,10 @@ class CreateAnswers < ActiveRecord::Migration[6.1]
       t.text :body
       t.belongs_to :story, null: false, foreign_key: true
       t.belongs_to :user, null: false, foreign_key: true
+<<<<<<< HEAD
+=======
+      t.string :user_name
+>>>>>>> 97c70a4... зміни в контролері, роутах , міграція
 
       t.timestamps
     end

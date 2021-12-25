@@ -25,9 +25,12 @@ class GameController < ApplicationController
 
       game.users << user
       inv = InvitationToTheGame.find_by(user_id: user.id, game_id: game.id)
+<<<<<<< HEAD
 
       # game.players.push({ user_id: user.id, user_name: user.username })
       # game.save!
+=======
+>>>>>>> 97c70a4... зміни в контролері, роутах , міграція
       data = {
         invitation_id: inv['id'],
         game_id: game.id,
@@ -163,6 +166,7 @@ class GameController < ApplicationController
   def leaveTheGame
     gameId = params['game_id']
     game = Game.find(gameId)
+<<<<<<< HEAD
     invitation = InvitationToTheGame.find(params['invitation_id'])
 
     if @current_user.id == invitation.user_id
@@ -184,6 +188,29 @@ class GameController < ApplicationController
     else
       render json: { leavet_he_game: false }
     end
+=======
+    invitation =
+      InvitationToTheGame.find_by!(game_id: gameId, user_id: @current_user.id)
+
+    invitation.update(join_the_game: false)
+
+    playersOnline =
+      User
+        .select('users.id, users.username, invitation_to_the_games.player')
+        .joins(:invitation_to_the_games)
+        .where(
+          'invitation_to_the_games.game_id = ? AND invitation_to_the_games.join_the_game = ?',
+          gameId,
+          true,
+        )
+
+    ActionCable.server.broadcast "change_players_online_channel_#{gameId}",
+                                 playersOnline
+
+    render json: { leavet_he_game: true }
+  rescue ActiveRecord::RecordNotFound
+    render json: { leavet_he_game: false }
+>>>>>>> 97c70a4... зміни в контролері, роутах , міграція
   end
 
   def searchGameYouHaveJoined
@@ -240,7 +267,11 @@ class GameController < ApplicationController
     game = Game.find(gameId)
 
     if game.driving['user_id'] == @current_user.id
+<<<<<<< HEAD
       game.update(history_poll: {}, poll: false)
+=======
+      game.update(history_poll: {}, poll: false, id_players_answers: [])
+>>>>>>> 97c70a4... зміни в контролері, роутах , міграція
       stories = game.stories
       answers = {}
       stories.map { |story| answers[story.id] = story.answers }
@@ -249,6 +280,7 @@ class GameController < ApplicationController
     end
   end
 
+<<<<<<< HEAD
   def giveAnAnswer
     fibonacci = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 'pass']
     story = Story.find(params['storyId'])
@@ -287,6 +319,54 @@ class GameController < ApplicationController
     #     end
     #   end
     # end
+=======
+  def resetCards
+    storyId = params['storyId']
+    gameId = params['gameId']
+
+    story = Story.find(storyId)
+    game = Game.find(gameId)
+
+    answers = story.answers
+
+    if game.driving['user_id'] == @current_user.id && answers.length != 0
+      answers.destroy_all
+      game.update(history_poll: { id: story.id, body: story.body }, poll: true)
+      ActionCable.server.broadcast "answers_channel_#{gameId}",
+                                   { game: game, answers: answers }
+    end
+  end
+
+  def giveAnAnswer
+    fibonacci = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 'pass']
+    storyId = params['storyId']
+    story = Story.find(storyId)
+    game = Game.find(story.game_id)
+
+    players =
+      InvitationToTheGame.find_by!(
+        user_id: @current_user.id,
+        game_id: game.id,
+        join_the_game: true,
+        player: true,
+      )
+
+    playerAnswer = game.id_players_answers.find { |id| id == @current_user.id }
+
+    if fibonacci.include?(params['answer']) && !playerAnswer
+      Answer.create(
+        body: params['answer'],
+        story_id: storyId,
+        user_id: @current_user.id,
+        user_name: @current_user.username,
+      )
+      game.id_players_answers += [@current_user.id]
+      game.save!
+      ActionCable.server.broadcast "game_channel_#{game.id}", game
+    end
+  rescue ActiveRecord::RecordNotFound
+    render json: { giveAnAnswer: false }
+>>>>>>> 97c70a4... зміни в контролері, роутах , міграція
   end
 
   def addHistory
