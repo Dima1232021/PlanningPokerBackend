@@ -25,12 +25,10 @@ class GameController < ApplicationController
 
       game.users << user
       inv = InvitationToTheGame.find_by(user_id: user.id, game_id: game.id)
-<<<<<<< HEAD
 
       # game.players.push({ user_id: user.id, user_name: user.username })
       # game.save!
-=======
->>>>>>> 97c70a4... зміни в контролері, роутах , міграція
+
       data = {
         invitation_id: inv['id'],
         game_id: game.id,
@@ -166,7 +164,6 @@ class GameController < ApplicationController
   def leaveTheGame
     gameId = params['game_id']
     game = Game.find(gameId)
-<<<<<<< HEAD
     invitation = InvitationToTheGame.find(params['invitation_id'])
 
     if @current_user.id == invitation.user_id
@@ -188,7 +185,7 @@ class GameController < ApplicationController
     else
       render json: { leavet_he_game: false }
     end
-=======
+
     invitation =
       InvitationToTheGame.find_by!(game_id: gameId, user_id: @current_user.id)
 
@@ -210,7 +207,6 @@ class GameController < ApplicationController
     render json: { leavet_he_game: true }
   rescue ActiveRecord::RecordNotFound
     render json: { leavet_he_game: false }
->>>>>>> 97c70a4... зміни в контролері, роутах , міграція
   end
 
   def searchGameYouHaveJoined
@@ -267,11 +263,8 @@ class GameController < ApplicationController
     game = Game.find(gameId)
 
     if game.driving['user_id'] == @current_user.id
-<<<<<<< HEAD
-      game.update(history_poll: {}, poll: false)
-=======
       game.update(history_poll: {}, poll: false, id_players_answers: [])
->>>>>>> 97c70a4... зміни в контролері, роутах , міграція
+
       stories = game.stories
       answers = {}
       stories.map { |story| answers[story.id] = story.answers }
@@ -280,7 +273,6 @@ class GameController < ApplicationController
     end
   end
 
-<<<<<<< HEAD
   def giveAnAnswer
     fibonacci = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 'pass']
     story = Story.find(params['storyId'])
@@ -319,7 +311,8 @@ class GameController < ApplicationController
     #     end
     #   end
     # end
-=======
+  end
+
   def resetCards
     storyId = params['storyId']
     gameId = params['gameId']
@@ -366,7 +359,6 @@ class GameController < ApplicationController
     end
   rescue ActiveRecord::RecordNotFound
     render json: { giveAnAnswer: false }
->>>>>>> 97c70a4... зміни в контролері, роутах , міграція
   end
 
   def addHistory
