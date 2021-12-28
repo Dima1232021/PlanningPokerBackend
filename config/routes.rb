@@ -9,6 +9,7 @@ Rails.application.routes.draw do
   post '/game/start_a_poll', to: 'game#startAPoll'
   post '/game/flip_card', to: 'game#flipCard'
   post '/game/reset_cards', to: 'game#resetCards'
+  post '/game/change_host_settings', to: 'game#changeHostSettings'
 
   post '/game/give_an_answer', to: 'game#giveAnAnswer'
   post '/game/add_history', to: 'game#addHistory'
