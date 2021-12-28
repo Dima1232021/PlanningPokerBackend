@@ -133,38 +133,40 @@ class GameController < ApplicationController
   end
 
   def deleteInvited
-    invitation = InvitationToTheGame.find(params['invitation_id'])
+    invitation =
+      InvitationToTheGame.find_by!(
+        id: params['invitation_id'],
+        user_id: @current_user.id,
+      )
     gameId = invitation.game_id
     game = Game.find(gameId)
 
-    if @current_user.id == invitation.user_id
-      invitation.destroy
+    invitation.destroy
 
-      invitedPlayers =
-        game.users.select(
-          'users.id, users.username, invitation_to_the_games.player',
+    invitedPlayers =
+      game.users.select(
+        'users.id, users.username, invitation_to_the_games.player',
+      )
+
+    playersOnline =
+      User
+        .select('users.id, users.username, invitation_to_the_games.player')
+        .joins(:invitation_to_the_games)
+        .where(
+          'invitation_to_the_games.game_id = ? AND invitation_to_the_games.join_the_game = ?',
+          game.id,
+          true,
         )
 
-      playersOnline =
-        User
-          .select('users.id, users.username, invitation_to_the_games.player')
-          .joins(:invitation_to_the_games)
-          .where(
-            'invitation_to_the_games.game_id = ? AND invitation_to_the_games.join_the_game = ?',
-            game.id,
-            true,
-          )
+    ActionCable.server.broadcast "delete_invited_channel_#{gameId}",
+                                 {
+                                   invited_players: invitedPlayers,
+                                   players_online: playersOnline,
+                                 }
 
-      ActionCable.server.broadcast "delete_invited_channel_#{gameId}",
-                                   {
-                                     invited_players: invitedPlayers,
-                                     players_online: playersOnline,
-                                   }
-
-      render json: { delete_invited: true }
-    else
-      render json: { delete_invited: false }
-    end
+    render json: { delete_invited: true }
+  rescue ActiveRecord::RecordNotFound
+    render json: { delete_invited: false }
   end
 
   def leaveTheGame
