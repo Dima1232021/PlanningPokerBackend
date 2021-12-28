@@ -98,7 +98,10 @@ class GameController < ApplicationController
     stories = game.stories
     invitation.update(join_the_game: true)
 
-    invitedPlayers = game.users.select('users.id, users.username')
+    invitedPlayers =
+      game.users.select(
+        'users.id, users.username, invitation_to_the_games.player',
+      )
 
     playersOnline =
       User
@@ -137,7 +140,10 @@ class GameController < ApplicationController
     if @current_user.id == invitation.user_id
       invitation.destroy
 
-      invitedPlayers = game.users.select('users.id, users.username')
+      invitedPlayers =
+        game.users.select(
+          'users.id, users.username, invitation_to_the_games.player',
+        )
 
       playersOnline =
         User
@@ -163,28 +169,6 @@ class GameController < ApplicationController
 
   def leaveTheGame
     gameId = params['game_id']
-    game = Game.find(gameId)
-    invitation = InvitationToTheGame.find(params['invitation_id'])
-
-    if @current_user.id == invitation.user_id
-      invitation.update(join_the_game: false)
-      playersOnline =
-        User
-          .select('users.id, users.username, invitation_to_the_games.player')
-          .joins(:invitation_to_the_games)
-          .where(
-            'invitation_to_the_games.game_id = ? AND invitation_to_the_games.join_the_game = ?',
-            gameId,
-            true,
-          )
-
-      ActionCable.server.broadcast "change_players_online_channel_#{gameId}",
-                                   playersOnline
-
-      render json: { leavet_he_game: true }
-    else
-      render json: { leavet_he_game: false }
-    end
 
     invitation =
       InvitationToTheGame.find_by!(game_id: gameId, user_id: @current_user.id)
