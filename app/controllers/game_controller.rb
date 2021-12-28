@@ -273,10 +273,10 @@ class GameController < ApplicationController
     end
   end
 
-  def giveAnAnswer
-    fibonacci = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 'pass']
-    story = Story.find(params['storyId'])
-    game = Game.find(story.game_id)
+  # def giveAnAnswer
+  #   fibonacci = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 'pass']
+  #   story = Story.find(params['storyId'])
+  #   game = Game.find(story.game_id)
 
     # playersOnline =
     #   game
