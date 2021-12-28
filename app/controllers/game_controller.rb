@@ -215,7 +215,10 @@ class GameController < ApplicationController
 
     game = Game.find(invitation.game_id)
 
-    invitedPlayers = game.users.select('users.id, users.username')
+    invitedPlayers =
+      game.users.select(
+        'users.id, users.username, invitation_to_the_games.player',
+      )
 
     playersOnline =
       User
@@ -370,30 +373,34 @@ class GameController < ApplicationController
 
   def changeHostSettings
     gameId = params['gameId']
-
     game = Game.find!(gameId)
 
-    invitation =
-      InvitationToTheGame.find_by!(
-        game_id: gameId,
-        user_id: @current_user.id.id,
-      )
-
-    player = invitation.player
-
     if game.driving['user_id'] == @current_user.id
-      invitation.update(player: !player)
-      playersOnline =
-        User
-          .select('users.id, users.username, invitation_to_the_games.player')
-          .joins(:invitation_to_the_games)
-          .where(
-            'invitation_to_the_games.game_id = ? AND invitation_to_the_games.join_the_game = ?',
-            game.id,
-            true,
-          )
-      ActionCable.server.broadcast "change_players_online_channel_#{gameId}",
-                                   playersOnline
+      puts '|||||||||||||||||||'
+      p game.driving['user_id']
     end
+
+    # invitation =
+    #   InvitationToTheGame.find_by!(
+    #     game_id: gameId,
+    #     user_id: @current_user.id.id,
+    #   )
+
+    # player = invitation.player
+
+    # if game.driving['user_id'] == @current_user.id
+    #   invitation.update(player: !player)
+    #   playersOnline =
+    #     User
+    #       .select('users.id, users.username, invitation_to_the_games.player')
+    #       .joins(:invitation_to_the_games)
+    #       .where(
+    #         'invitation_to_the_games.game_id = ? AND invitation_to_the_games.join_the_game = ?',
+    #         game.id,
+    #         true,
+    #       )
+    #   ActionCable.server.broadcast "change_players_online_channel_#{gameId}",
+    #                                playersOnline
+    # end
   end
 end
