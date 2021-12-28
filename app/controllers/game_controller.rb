@@ -357,7 +357,7 @@ class GameController < ApplicationController
     end
   end
 
-  def changeHostSettings
+  def playerSettings
     gameId = params['gameId']
     game = Game.find(gameId)
     invitation =
