@@ -262,7 +262,7 @@ class GameController < ApplicationController
     gameId = params['gameId']
     game = Game.find(gameId)
 
-    if game.driving['user_id'] == @current_user.id
+    if game.driving['user_id'] == @current_user.id && game.poll
       game.update(history_poll: {}, poll: false, id_players_answers: [])
 
       stories = game.stories
@@ -271,46 +271,6 @@ class GameController < ApplicationController
       ActionCable.server.broadcast "answers_channel_#{gameId}",
                                    { answers: answers, game: game }
     end
-  end
-
-  # def giveAnAnswer
-  #   fibonacci = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 'pass']
-  #   story = Story.find(params['storyId'])
-  #   game = Game.find(story.game_id)
-
-    # playersOnline =
-    #   game
-    #     .users_joined
-    #     .each_with_object([]) do |user, newArr|
-    #       game.players.each do |value|
-    #         newArr << user if user['user_id'] == value['user_id']
-    #       end
-    #     end
-
-    # unless game
-    #          .players
-    #          .detect { |user| user['user_id'] == @current_user.id }
-    #          .nil?
-    #   story.users << @current_user
-    #   answer = Answer.find_by(story_id: story.id, user_id: @current_user.id)
-
-    #   if fibonacci.include? params['answer']
-    #     answer.update(body: params['answer'])
-    #     game.id_players_responded.push(@current_user.id)
-    #     game.save!
-
-    #     if game.id_players_responded.length == playersOnline.length
-    #       game.update(selected_story: {}, id_players_responded: [])
-    #       stories = game.stories
-    #       answers = {}
-    #       stories.map { |story| answers[story.id] = story.answers }
-    #       ActionCable.server.broadcast "answers_channel_#{story.game_id}",
-    #                                    { answers: answers, game: game }
-    #     else
-    #       ActionCable.server.broadcast "game_channel_#{story.game_id}", game
-    #     end
-    #   end
-    # end
   end
 
   def resetCards
@@ -322,7 +282,8 @@ class GameController < ApplicationController
 
     answers = story.answers
 
-    if game.driving['user_id'] == @current_user.id && answers.length != 0
+    if game.driving['user_id'] == @current_user.id && answers.length != 0 &&
+         !game.poll
       answers.destroy_all
       game.update(history_poll: { id: story.id, body: story.body }, poll: true)
       ActionCable.server.broadcast "answers_channel_#{gameId}",
