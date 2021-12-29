@@ -243,9 +243,11 @@ class GameController < ApplicationController
     if @game.driving['user_id'] == @current_user.id && answers.length != 0 &&
          !@game.poll
       answers.destroy_all
+
       @game.update(history_poll: { id: story.id, body: story.body }, poll: true)
+      answer = { storyId => [] }
       ActionCable.server.broadcast "answers_channel_#{@gameId}",
-                                   { game: @game, answers: answers }
+                                   { game: @game, answers: answer }
     end
   end
 
