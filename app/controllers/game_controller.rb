@@ -14,6 +14,7 @@ class GameController < ApplicationController
                   editHistory
                   deleteHistory
                   playerSettings
+                  changeCardFlipSettings
                 ]
   before_action :findInvitaion,
                 only: %i[joinTheGame leaveTheGame playerSettings]
@@ -208,11 +209,7 @@ class GameController < ApplicationController
   def startAPoll
     storyId = params['storyId']
 
-    # gameId = params['gameId']
-
     story = Story.find(storyId)
-
-    # game = Game.find(gameId)
 
     answers = story.answers.length
 
@@ -254,29 +251,49 @@ class GameController < ApplicationController
   def giveAnAnswer
     fibonacci = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 'pass']
     storyId = params['storyId']
-    story = Story.find(storyId)
-    game = Game.find(story.game_id)
+    game = Game.joins(:stories).find_by('stories.id = ?', storyId)
 
+    # шукаю всіх гравців гри
     players =
-      InvitationToTheGame.find_by!(
-        user_id: @current_user.id,
+      InvitationToTheGame.where(
         game_id: game.id,
         join_the_game: true,
         player: true,
       )
 
-    playerAnswer = game.id_players_answers.find { |id| id == @current_user.id }
+    # перевіряю чи поточний гравець може давати відповідь
+    players.find_by!(user_id: @current_user.id)
 
-    if fibonacci.include?(params['answer']) && !playerAnswer
+    # шукаю всі ІД гравців які дали відповідь
+    findIdWhoGivenAnswer = game.id_players_answers
+
+    # шукаю  ІД поточного гравця
+    findIdPlayer = findIdWhoGivenAnswer.find { |id| id == @current_user.id }
+
+    # перевіряю на правельність відповіді і чи не давав поточний гравець відповіді
+    if fibonacci.include?(params['answer']) && !findIdPlayer
+      # створюю відповідь і також додаю ІД в схему гри і зберігаю зміни
       Answer.create(
         body: params['answer'],
         story_id: storyId,
         user_id: @current_user.id,
         user_name: @current_user.username,
       )
-      game.id_players_answers += [@current_user.id]
-      game.save!
-      ActionCable.server.broadcast "game_channel_#{game.id}", game
+      game.id_players_answers.push(@current_user.id)
+      game.save
+
+      #  перевіряю чи ведучий хоче автоматичне перевернення карт якщо да то то перевіряю чи всі гравці  дали відповідь
+      if game.flipСardsAutomatically &&
+           players.size == findIdWhoGivenAnswer.size
+        game.update(history_poll: {}, poll: false, id_players_answers: [])
+        stories = game.stories
+        answers = {}
+        stories.map { |story| answers[story.id] = story.answers }
+        ActionCable.server.broadcast "answers_channel_#{game.id}",
+                                     { answers: answers, game: game }
+      else
+        ActionCable.server.broadcast "game_channel_#{game.id}", game
+      end
     end
   rescue ActiveRecord::RecordNotFound
     render json: { giveAnAnswer: false }
@@ -331,6 +348,12 @@ class GameController < ApplicationController
                                      onlineUsers: @onlineUsers,
                                      onlinePlayers: @onlinePlayers,
                                    }
+    end
+  end
+  def changeCardFlipSettings
+    if @game.driving['user_id'] == @current_user.id
+      @game.update(flipСardsAutomatically: !@game.flipСardsAutomatically)
+      ActionCable.server.broadcast "game_channel_#{@gameId}", @game
     end
   end
 
