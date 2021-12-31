@@ -1,7 +1,7 @@
 class DeleteInvitedChannel < ApplicationCable::Channel
   def subscribed
-    game_id = params['game_id']
-    stream_from "delete_invited_channel_#{game_id}"
+    userid = params['userid']
+    stream_from "delete_invited_channel_#{userid}"
   end
 
   def unsubscribed

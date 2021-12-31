@@ -5,6 +5,7 @@ class GameController < ApplicationController
                 only: %i[
                   deleteGame
                   joinTheGame
+                  deleteInvited
                   leaveTheGame
                   startAPoll
                   flipCard
@@ -130,51 +131,29 @@ class GameController < ApplicationController
   end
 
   def deleteInvited
-    gameId = params['gameId']
     userId = params['userId']
 
-    game = Game.find(gameId)
-
-    if @current_user.id == userId
+    if (
+         @current_user.id == userId ||
+           @current_user.id == @game.driving['user_id']
+       ) && @game.driving['user_id'] != userId
       invitation =
-        InvitationToTheGame.find_by!(user_id: userId, game_id: gameId)
+        InvitationToTheGame.find_by!(user_id: userId, game_id: @gameId)
       invitation.destroy
 
-      dataUsers(game)
-      ActionCable.server.broadcast "change_players_online_channel_#{gameId}",
+      dataUsers(@game)
+      ActionCable.server.broadcast "change_players_online_channel_#{@gameId}",
                                    {
                                      invitedUsers: @invitedUsers,
                                      onlineUsers: @onlineUsers,
                                      onlinePlayers: @onlinePlayers,
                                    }
 
-      render json: { delete_invited: true, invitationId: invitation.id }
-      # puts '||||||||||||||---curent---|||||||||||||||||||'
-    elsif @current_user.id == game.driving['user_id']
-      # puts '||||||||||||||---driving---|||||||||||||||||||'
-    else
-      puts '||||||||||||||---false---|||||||||||||||||||'
+      ActionCable.server.broadcast "delete_invited_channel_#{userId}",
+                                   { invitationId: invitation.id }
     end
-
-    #   invitation =
-    #     InvitationToTheGame.find_by!(
-    #       id: params['invitation_id'],
-    #       user_id: @current_user.id,
-    #     )
-
-    #   invitation.destroy
-
-    #   dataUsers(@game)
-
-    # ActionCable.server.broadcast "change_players_online_channel_#{@gameId}",
-    #                              {
-    #                                onlineUsers: @onlineUsers,
-    #                                onlinePlayers: @onlinePlayers,
-    #                              }
-
-    #   render json: { delete_invited: true }
-    # rescue ActiveRecord::RecordNotFound
-    #   render json: { delete_invited: false }
+  rescue ActiveRecord::RecordNotFound
+    render json: { delete_invited: false }
   end
 
   def leaveTheGame
@@ -367,15 +346,6 @@ class GameController < ApplicationController
       ActionCable.server.broadcast "game_channel_#{@gameId}", @game
     end
   end
-
-  # def expelPlayer
-  #   gameId = params['gameId']
-  #   userId = params['userId']
-
-  #   puts '||||||||||||||||||||'
-  #   p gameId
-  #   p userId
-  # end
 
   private
 
