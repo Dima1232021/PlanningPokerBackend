@@ -5,7 +5,6 @@ class GameController < ApplicationController
                 only: %i[
                   deleteGame
                   joinTheGame
-                  deleteInvited
                   leaveTheGame
                   startAPoll
                   flipCard
@@ -131,38 +130,51 @@ class GameController < ApplicationController
   end
 
   def deleteInvited
-    invitation =
-      InvitationToTheGame.find_by!(
-        id: params['invitation_id'],
-        user_id: @current_user.id,
-      )
+    gameId = params['gameId']
+    userId = params['userId']
 
-    invitation.destroy
+    game = Game.find(gameId)
 
-    invitedPlayers =
-      @game.users.select(
-        'users.id, users.username, invitation_to_the_games.player',
-      )
+    if @current_user.id == userId
+      invitation =
+        InvitationToTheGame.find_by!(user_id: userId, game_id: gameId)
+      invitation.destroy
 
-    playersOnline =
-      User
-        .select('users.id, users.username, invitation_to_the_games.player')
-        .joins(:invitation_to_the_games)
-        .where(
-          'invitation_to_the_games.game_id = ? AND invitation_to_the_games.join_the_game = ?',
-          @gameId,
-          true,
-        )
+      dataUsers(game)
+      ActionCable.server.broadcast "change_players_online_channel_#{gameId}",
+                                   {
+                                     invitedUsers: @invitedUsers,
+                                     onlineUsers: @onlineUsers,
+                                     onlinePlayers: @onlinePlayers,
+                                   }
 
-    ActionCable.server.broadcast "delete_invited_channel_#{@gameId}",
-                                 {
-                                   invited_players: invitedPlayers,
-                                   players_online: playersOnline,
-                                 }
+      render json: { delete_invited: true, invitationId: invitation.id }
+      # puts '||||||||||||||---curent---|||||||||||||||||||'
+    elsif @current_user.id == game.driving['user_id']
+      # puts '||||||||||||||---driving---|||||||||||||||||||'
+    else
+      puts '||||||||||||||---false---|||||||||||||||||||'
+    end
 
-    render json: { delete_invited: true }
-  rescue ActiveRecord::RecordNotFound
-    render json: { delete_invited: false }
+    #   invitation =
+    #     InvitationToTheGame.find_by!(
+    #       id: params['invitation_id'],
+    #       user_id: @current_user.id,
+    #     )
+
+    #   invitation.destroy
+
+    #   dataUsers(@game)
+
+    # ActionCable.server.broadcast "change_players_online_channel_#{@gameId}",
+    #                              {
+    #                                onlineUsers: @onlineUsers,
+    #                                onlinePlayers: @onlinePlayers,
+    #                              }
+
+    #   render json: { delete_invited: true }
+    # rescue ActiveRecord::RecordNotFound
+    #   render json: { delete_invited: false }
   end
 
   def leaveTheGame
@@ -337,7 +349,6 @@ class GameController < ApplicationController
                                    { stories: stories, answers: answers }
     end
   end
-
   def playerSettings
     if @game.driving['user_id'] == @current_user.id && !@game.poll
       @invitation.update(player: !@invitation.player)
@@ -356,6 +367,15 @@ class GameController < ApplicationController
       ActionCable.server.broadcast "game_channel_#{@gameId}", @game
     end
   end
+
+  # def expelPlayer
+  #   gameId = params['gameId']
+  #   userId = params['userId']
+
+  #   puts '||||||||||||||||||||'
+  #   p gameId
+  #   p userId
+  # end
 
   private
 
