@@ -11,7 +11,6 @@ Rails.application.routes.draw do
   post '/game/reset_cards', to: 'game#resetCards'
   post '/game/player_settings', to: 'game#playerSettings'
   post '/game/change_card_flip_settings', to: 'game#changeCardFlipSettings'
-  # post '/game/expel_player', to: 'game#expelPlayer'
 
   post '/game/give_an_answer', to: 'game#giveAnAnswer'
   post '/game/add_history', to: 'game#addHistory'

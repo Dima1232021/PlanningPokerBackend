@@ -40,6 +40,6 @@ module Backend
     #   secure: true,
     # )
 
-    config.hosts << 'devserver.test'
+    # config.hosts << 'devserver.test'
   end
 end
