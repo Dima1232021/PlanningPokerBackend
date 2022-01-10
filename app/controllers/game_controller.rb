@@ -34,9 +34,13 @@ class GameController < ApplicationController
         },
       )
 
-    InvitationToTheGame
+       game.save!
+
+      InvitationToTheGame
       .find_by!(user_id: @current_user.id, game_id: game.id)
       .update(player: !justDriving)
+
+
 
     users.map do |user|
       user = User.find(user['id'])
