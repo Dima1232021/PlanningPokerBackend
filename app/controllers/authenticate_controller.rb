@@ -2,10 +2,10 @@
 
 class AuthenticateController < ApplicationController
   def create
-    username = params['user']['username']
-    email = params['user']['email']
-    password = params['user']['password']
-    password_confirmation = params['user']['password_confirmation']
+    username = params['username']
+    email = params['email']
+    password = params['password']
+    password_confirmation = params['passwordConf']
 
     user =
       User.create!(
@@ -25,8 +25,8 @@ class AuthenticateController < ApplicationController
   end
 
   def login
-    email = params['user']['email']
-    password = params['user']['password']
+    email = params['email']
+    password = params['password']
 
     user = User.find_by!(email: email).try(:authenticate, password)
 

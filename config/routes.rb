@@ -22,8 +22,8 @@ Rails.application.routes.draw do
   get '/game/your_games', to: 'game#yourGames'
   get '/game/invited_games', to: 'game#invitedGames'
   get '/game/search_game_you_have_joined', to: 'game#searchGameYouHaveJoined'
-
-  delete '/authenticate/logout', to: 'authenticate#logout'
+  get '/authenticate/logout', to: 'authenticate#logout'
+  
   delete '/game/delete_game', to: 'game#deleteGame'
   delete '/game/delete_invited', to: 'game#deleteInvited'
   delete '/game/delete_history', to: 'game#deleteHistory'
