@@ -20,47 +20,46 @@ class GameController < ApplicationController
                 only: %i[joinTheGame leaveTheGame playerSettings]
 
   def create
-    
-    # name_game = params['nameGame']
-    # users = params['users']
-    # stories = params['stories']
-    # justDriving = params['justDriving']
+    name_game = params['nameGame']
+    users = params['users']
+    stories = params['stories']
+    justDriving = params['justDriving']
 
-    # game =
-    #   @current_user.games.create(
-    #     name_game: name_game,
-    #     driving: {
-    #       user_id: @current_user.id,
-    #       user_name: @current_user.username,
-    #     },
-    #   )
+    game =
+      @current_user.games.create(
+        name_game: name_game,
+        driving: {
+          user_id: @current_user.id,
+          user_name: @current_user.username,
+        },
+      )
 
-    #    game.save!
+       game.save!
 
-    #   InvitationToTheGame
-    #   .find_by!(user_id: @current_user.id, game_id: game.id)
-    #   .update(player: !justDriving)
-
+      InvitationToTheGame
+      .find_by!(user_id: @current_user.id, game_id: game.id)
+      .update(player: !justDriving)
 
 
-    # users.map do |user|
-    #   user = User.find(user['id'])
 
-    #   game.users << user
-    #   inv = InvitationToTheGame.find_by(user_id: user.id, game_id: game.id)
+    users.map do |user|
+      user = User.find(user['id'])
 
-    #   data = {
-    #     invitation_id: inv['id'],
-    #     game_id: game.id,
-    #     game_name: game.name_game,
-    #   }
+      game.users << user
+      inv = InvitationToTheGame.find_by(user_id: user.id, game_id: game.id)
 
-    #   ShowingGameRequestsChannel.broadcast_to user, data
-    # end
+      data = {
+        invitation_id: inv['id'],
+        game_id: game.id,
+        game_name: game.name_game,
+      }
 
-    # stories.map { |story| game.stories.build(body: story).save }
+      ShowingGameRequestsChannel.broadcast_to user, data
+    end
 
-    # render json: { status: :created, game: game }
+    stories.map { |story| game.stories.build(body: story).save }
+
+    render json: { status: :created, game: game }
   end
 
   def yourGames
