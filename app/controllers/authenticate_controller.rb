@@ -16,20 +16,20 @@ class AuthenticateController < ApplicationController
       )
 
     session[:user_id] = user.id
-    render json: { user: {id: user.id, username: user.username,}, logged_in: true }
+    render json: { user: {id: user.id, username: user.username}, logged_in: true }
   rescue ActiveRecord::RecordInvalid => e
     render json: { error: e.to_s }
   end
 
-  def login
+  def login 
     email = params['email']
     password = params['password']
     user = User.find_by!(email: email).try(:authenticate, password)
 
-      session[:user_id] = user.id
-      render json: { user: {id: user.id, username: user.username,}, logged_in: true }
+    session[:user_id] = user.id
+    render json: { user: {id: user.id, username: user.username}, logged_in: true }
     rescue 
-      render json: { error: 'Validation failed: invalid login or password' }
+    render json: { error: 'Validation failed: invalid login or password' }
 
   end
 

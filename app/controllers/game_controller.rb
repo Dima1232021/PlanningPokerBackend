@@ -20,52 +20,32 @@ class GameController < ApplicationController
                 only: %i[joinTheGame leaveTheGame playerSettings]
 
   def create
-    name_game = params['nameGame']
-    users = params['users']
+    nameGame = params['nameGame']
     stories = params['stories']
     justDriving = params['justDriving']
 
+    createUrl = "";
+    characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+    (1..30).each{|i| createUrl +=characters[rand(characters.size)]}
+
     game =
       @current_user.games.create(
-        name_game: name_game,
+        url: createUrl
+        name_game: nameGame,
         driving: {
           user_id: @current_user.id,
           user_name: @current_user.username,
         },
       )
-
-       game.save!
+    game.save!
 
       InvitationToTheGame
       .find_by!(user_id: @current_user.id, game_id: game.id)
       .update(player: !justDriving)
 
-
-
-    users.map do |user|
-      user = User.find(user['id'])
-
-      game.users << user
-      inv = InvitationToTheGame.find_by(user_id: user.id, game_id: game.id)
-
-      data = {
-        invitation_id: inv['id'],
-        game_id: game.id,
-        game_name: game.name_game,
-      }
-
-      ShowingGameRequestsChannel.broadcast_to user, data
-    end
-
     stories.map { |story| game.stories.build(body: story).save }
 
-    render json: { status: :created, game: game }
-  end
-
-  def yourGames
-    games = Game.where("driving->>'user_id' = '?'", @current_user.id)
-
-    render json: games
+    render json: { create: true, game: game }
   end
 
   def deleteGame
@@ -82,27 +62,6 @@ class GameController < ApplicationController
     else
       render json: { delete_game: false }
     end
-  end
-
-  def invitedGames
-    games = []
-
-    InvitationToTheGame
-      .where(user_id: @current_user.id)
-      .map do |inv|
-        game = Game.find(inv.game_id)
-        next unless game.driving['user_id'] != @current_user.id
-
-        games.push(
-          {
-            invitation_id: inv.id,
-            game_id: inv.game_id,
-            game_name: game.name_game,
-          },
-        )
-      end
-
-    render json: games
   end
 
   def joinTheGame

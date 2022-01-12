@@ -28,6 +28,7 @@ ActiveRecord::Schema.define(version: 2021_12_08_112715) do
 
   create_table "games", force: :cascade do |t|
     t.string "name_game"
+    t.string "url"
     t.json "driving", default: {}, null: false
     t.json "history_poll", default: {}, null: false
     t.integer "id_players_answers", default: [], array: true
