@@ -19,35 +19,6 @@ class GameController < ApplicationController
   before_action :findInvitaion,
                 only: %i[joinTheGame leaveTheGame playerSettings]
 
-  def create
-    nameGame = params['nameGame']
-    stories = params['stories']
-    justDriving = params['justDriving']
-
-    createUrl = "";
-    characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-    (1..30).each{|i| createUrl +=characters[rand(characters.size)]}
-
-    game =
-      @current_user.games.create(
-        url: createUrl
-        name_game: nameGame,
-        driving: {
-          user_id: @current_user.id,
-          user_name: @current_user.username,
-        },
-      )
-    game.save!
-
-      InvitationToTheGame
-      .find_by!(user_id: @current_user.id, game_id: game.id)
-      .update(player: !justDriving)
-
-    stories.map { |story| game.stories.build(body: story).save }
-
-    render json: { create: true, game: game }
-  end
-
   def deleteGame
     if @game.driving['user_id'] == @current_user.id
       @game.invitation_to_the_games.each do |inv|

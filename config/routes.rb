@@ -3,7 +3,9 @@
 Rails.application.routes.draw do
   post '/authenticate/login', to: 'authenticate#login'
   post '/authenticate/create', to: 'authenticate#create'
-  post '/game/create', to: 'game#create'
+  post '/games/createGame', to: 'games#createGame'
+  post '/games/delete_game', to: 'games#deleteGame'
+
   post '/game/join_the_game', to: 'game#joinTheGame'
   post '/game/leave_the_game', to: 'game#leaveTheGame'
   post '/game/start_a_poll', to: 'game#startAPoll'
@@ -22,7 +24,7 @@ Rails.application.routes.draw do
   get '/authenticate/logout', to: 'authenticate#logout'
   get '/games', to: 'games#games' 
   
-  delete '/game/delete_game', to: 'game#deleteGame'
+
   delete '/game/delete_invited', to: 'game#deleteInvited'
   delete '/game/delete_history', to: 'game#deleteHistory'
 
