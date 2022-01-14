@@ -49,6 +49,7 @@ class GamesController < ApplicationController
       end
 
       def deleteGame
+   
         if @game.driving['user_id'] == @current_user.id
           @game.invitation_to_the_games.each do |inv|
             if @game.driving['user_id'] != inv.user_id
