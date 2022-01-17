@@ -19,14 +19,13 @@ Rails.application.routes.draw do
   post '/game/change_host_settings', to: 'game#changeHostSettings'
 
   get '/authenticate/logged_in', to: 'authenticate#logged_in'
-  get '/users/show', to: 'users#show'
-  get '/game/search_game_you_have_joined', to: 'game#searchGameYouHaveJoined'
-  get '/authenticate/logout', to: 'authenticate#logout'
-  get '/games', to: 'games#games' 
-  
 
-  delete '/game/delete_invited', to: 'game#deleteInvited'
-  delete '/game/delete_history', to: 'game#deleteHistory'
+  get '/game/find_game_you_have_joined', to: 'game#findGameYouHaveJoined'
+  get '/authenticate/logout', to: 'authenticate#logout'
+  get '/games', to: 'games#games'
+
+  # delete '/game/delete_invited', to: 'game#deleteInvited'
+  # delete '/game/delete_history', to: 'game#deleteHistory'
 
   mount ActionCable.server => '/cable'
 end
