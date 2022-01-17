@@ -5,7 +5,6 @@ class GameController < ApplicationController
                 only: %i[
                   joinTheGame
                   deleteInvited
-                  leaveTheGame
                   startAPoll
                   flipCard
                   resetCards
@@ -15,7 +14,7 @@ class GameController < ApplicationController
                   playerSettings
                   changeCardFlipSettings
                 ]
-  before_action :findInvitaion, only: %i[joinTheGame leaveTheGame playerSettings]
+  before_action :findInvitaion, only: %i[joinTheGame playerSettings]
   before_action :findAnswers, only: %i[joinTheGame]
 
   def joinTheGame
@@ -75,14 +74,14 @@ class GameController < ApplicationController
   end
 
   def leaveTheGame
-    @invitation.update(join_the_game: false)
+    invitation = InvitationToTheGame.find_by!(join_the_game: true, user_id: @current_user.id)
+    invitation.update(join_the_game: false)
 
-    dataUsers(@game)
+    # dataUsers(@game)
+    # ActionCable.server.broadcast "change_players_online_channel_#{@gameId}",
+    #                              { onlineUsers: @onlineUsers, onlinePlayers: @onlinePlayers }
 
-    ActionCable.server.broadcast "change_players_online_channel_#{@gameId}",
-                                 { onlineUsers: @onlineUsers, onlinePlayers: @onlinePlayers }
-
-    render json: { leavet_he_game: true }
+    render json: { leavetTheGame: true }
   rescue ActiveRecord::RecordNotFound
     render json: { leavet_he_game: false }
   end
@@ -96,11 +95,20 @@ class GameController < ApplicationController
 
     stories = game.stories
     answers = {}
+
     stories.map { |story| answers[story.id] = game.poll ? [] : story.answers }
     render json: {
-             join_the_game: true,
-             game: game,
-             invitation_id: invitation.id,
+             joinTheGame: true,
+             gameId: game.id,
+             driving: game.driving,
+             nameGame: game.name_game,
+             urlGame: game.url,
+             game: {
+               flipСardsAutomatically: game.flipСardsAutomatically,
+               historyPoll: game.history_poll,
+               idPlayersResponded: game.id_players_answers,
+               poll: game.poll,
+             },
              stories: stories,
              answers: answers,
              invitedUsers: @invitedUsers,
