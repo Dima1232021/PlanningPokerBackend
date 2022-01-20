@@ -5,6 +5,7 @@ class GameController < ApplicationController
                 except: %i[joinTheGame leaveTheGame findGameYouHaveJoined giveAnAnswer removeStory]
   before_action :findInvitaion, only: %i[changeDrivingSetings]
 
+  # слідуючі 4 блоки описують функціонал: приєднання та виходу із гри, видалиння та пошуку запрошення до гри
   def joinTheGame
     urlGame = params['urlGame']
     game = Game.find_by!(url: urlGame)
@@ -94,6 +95,8 @@ class GameController < ApplicationController
     render json: { gameYouHaveJoined: { joinTheGame: false } }
   end
 
+  # слідуючі 3 блоки описують функціонал: почтку, закунчення та рестарту гри
+
   def startPoll
     storyId = params['storyId']
 
@@ -132,6 +135,8 @@ class GameController < ApplicationController
       ActionCable.server.broadcast "answers_channel_#{@gameId}", { game: @game, answers: answer }
     end
   end
+
+  # слідуючий  блок описує функціонал: запису відповіді
 
   def giveAnAnswer
     fibonacci = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 'pass']
@@ -177,6 +182,8 @@ class GameController < ApplicationController
     render json: { giveAnAnswer: false }
   end
 
+  # слідуючі 3 блоки описують функціонал: створення, редагування та видалення історії для гри
+
   def addHistory
     body = params['body']
     if @game.driving['user_id'] == @current_user.id
@@ -215,6 +222,8 @@ class GameController < ApplicationController
                                    { stories: stories, answers: answers }
     end
   end
+
+  # слідуючі 2 блоки описують функціонал: зміни настройок автоматичного перевертання карт і зміни приймання участі у грі ведучого
 
   def changeDrivingSetings
     if @game.driving['user_id'] == @current_user.id && !@game.poll

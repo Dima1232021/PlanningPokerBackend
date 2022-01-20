@@ -1,6 +1,8 @@
 class GamesController < ApplicationController
   before_action :findGame, only: %i[deleteGame]
 
+  # отримати данні по іграм які створив і до яких приєднався
+
   def games
     userId = @current_user.id
     ownGames = Game.where("driving->>'user_id' = '?'", userId).select('id, name_game, url')
@@ -20,6 +22,8 @@ class GamesController < ApplicationController
 
     render json: { ownGames: ownGames, gamesInvitation: gamesInvitation }
   end
+
+  # створити та видалити гру
 
   def createGame
     nameGame = params['nameGame']
