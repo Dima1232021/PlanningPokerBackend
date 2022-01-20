@@ -96,7 +96,6 @@ class GameController < ApplicationController
   end
 
   # слідуючі 3 блоки описують функціонал: почтку, закунчення та рестарту гри
-
   def startPoll
     storyId = params['storyId']
 
@@ -137,7 +136,6 @@ class GameController < ApplicationController
   end
 
   # слідуючий  блок описує функціонал: запису відповіді
-
   def giveAnAnswer
     fibonacci = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 'pass']
     storyId = params['storyId']
@@ -183,7 +181,6 @@ class GameController < ApplicationController
   end
 
   # слідуючі 3 блоки описують функціонал: створення, редагування та видалення історії для гри
-
   def addHistory
     body = params['body']
     if @game.driving['user_id'] == @current_user.id
@@ -224,7 +221,6 @@ class GameController < ApplicationController
   end
 
   # слідуючі 2 блоки описують функціонал: зміни настройок автоматичного перевертання карт і зміни приймання участі у грі ведучого
-
   def changeDrivingSetings
     if @game.driving['user_id'] == @current_user.id && !@game.poll
       @invitation.update(player: !@invitation.player)

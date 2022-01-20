@@ -20,7 +20,6 @@ Rails.application.routes.draw do
   post '/game/reset_cards', to: 'game#resetCards'
   post '/game/give_an_answer', to: 'game#giveAnAnswer'
 
-
   # |||||||||||||||||---GET---|||||||||||||||||
   get '/authenticate/logged_in', to: 'authenticate#logged_in'
   get '/authenticate/logout', to: 'authenticate#logout'
@@ -28,7 +27,7 @@ Rails.application.routes.draw do
   get '/game/leave_the_game', to: 'game#leaveTheGame'
   get '/game/find_game_you_have_joined', to: 'game#findGameYouHaveJoined'
 
-  get '/games', to: 'games#games''
+  get '/games', to: 'games#games'
 
   mount ActionCable.server => '/cable'
 end
