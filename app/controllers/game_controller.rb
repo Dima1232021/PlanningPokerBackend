@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 class GameController < ApplicationController
-  before_action :findGame,
-                except: %i[joinTheGame leaveTheGame findGameYouHaveJoined giveAnAnswer removeStory]
+  before_action :findGame, except: %i[joinTheGame leaveTheGame findGameYouHaveJoined removeStory]
   before_action :findInvitaion, only: %i[changeDrivingSetings]
 
   # слідуючі 4 блоки описують функціонал: приєднання та виходу із гри, видалиння та пошуку запрошення до гри
@@ -105,7 +104,15 @@ class GameController < ApplicationController
 
     if @game.driving['user_id'] == @current_user.id && answers == 0
       @game.update(history_poll: { id: story.id, body: story.body }, poll: true)
-      ActionCable.server.broadcast "game_channel_#{@gameId}", @game
+      ActionCable.server.broadcast "game_channel_#{@gameId}",
+                                   {
+                                     game: {
+                                       flipСardsAutomatically: @game.flipСardsAutomatically,
+                                       historyPoll: @game.history_poll,
+                                       idPlayersResponded: @game.id_players_answers,
+                                       poll: @game.poll,
+                                     },
+                                   }
     end
   end
 
@@ -116,7 +123,16 @@ class GameController < ApplicationController
       stories = @game.stories
       answers = {}
       stories.map { |story| answers[story.id] = story.answers }
-      ActionCable.server.broadcast "answers_channel_#{@gameId}", { answers: answers, game: @game }
+      ActionCable.server.broadcast "answers_channel_#{@gameId}",
+                                   {
+                                     answers: answers,
+                                     game: {
+                                       flipСardsAutomatically: @game.flipСardsAutomatically,
+                                       historyPoll: @game.history_poll,
+                                       idPlayersResponded: @game.id_players_answers,
+                                       poll: @game.poll,
+                                     },
+                                   }
     end
   end
 
@@ -131,24 +147,34 @@ class GameController < ApplicationController
 
       @game.update(history_poll: { id: story.id, body: story.body }, poll: true)
       answer = { storyId => [] }
-      ActionCable.server.broadcast "answers_channel_#{@gameId}", { game: @game, answers: answer }
+      ActionCable.server.broadcast "answers_channel_#{@gameId}",
+                                   {
+                                     answers: answer,
+                                     game: {
+                                       flipСardsAutomatically: @game.flipСardsAutomatically,
+                                       historyPoll: @game.history_poll,
+                                       idPlayersResponded: @game.id_players_answers,
+                                       poll: @game.poll,
+                                     },
+                                   }
     end
   end
 
   # слідуючий  блок описує функціонал: запису відповіді
   def giveAnAnswer
     fibonacci = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 'pass']
-    storyId = params['storyId']
-    game = Game.joins(:stories).find_by('stories.id = ?', storyId)
+
+    # gameId = params['gameId']
+    # game = Game.find(gameId)
 
     # шукаю всіх гравців гри
-    players = InvitationToTheGame.where(game_id: game.id, join_the_game: true, player: true)
+    players = InvitationToTheGame.where(game_id: @gameId, join_the_game: true, player: true)
 
     # перевіряю чи поточний гравець може давати відповідь
     players.find_by!(user_id: @current_user.id)
 
     # шукаю всі ІД гравців які дали відповідь
-    findIdWhoGivenAnswer = game.id_players_answers
+    findIdWhoGivenAnswer = @game.id_players_answers
 
     # шукаю  ІД поточного гравця
     findIdPlayer = findIdWhoGivenAnswer.find { |id| id == @current_user.id }
@@ -158,22 +184,39 @@ class GameController < ApplicationController
       # створюю відповідь і також додаю ІД в схему гри і зберігаю зміни
       Answer.create(
         body: params['answer'],
-        story_id: storyId,
+        story_id: @game.history_poll['id'],
         user_id: @current_user.id,
         user_name: @current_user.username,
       )
-      game.id_players_answers.push(@current_user.id)
-      game.save
+      @game.id_players_answers.push(@current_user.id)
+      @game.save
 
       #  перевіряю чи ведучий хоче автоматичне перевернення карт якщо да то то перевіряю чи всі гравці  дали відповідь
-      if game.flipСardsAutomatically && players.size == findIdWhoGivenAnswer.size
-        game.update(history_poll: {}, poll: false, id_players_answers: [])
-        stories = game.stories
+      if @game.flipСardsAutomatically && players.size == findIdWhoGivenAnswer.size
+        @game.update(history_poll: {}, poll: false, id_players_answers: [])
+        stories = @game.stories
         answers = {}
         stories.map { |story| answers[story.id] = story.answers }
-        ActionCable.server.broadcast "answers_channel_#{game.id}", { answers: answers, game: game }
+        ActionCable.server.broadcast "answers_channel_#{@gameId}",
+                                     {
+                                       answers: answers,
+                                       game: {
+                                         flipСardsAutomatically: @game.flipСardsAutomatically,
+                                         historyPoll: @game.history_poll,
+                                         idPlayersResponded: @game.id_players_answers,
+                                         poll: @game.poll,
+                                       },
+                                     }
       else
-        ActionCable.server.broadcast "game_channel_#{game.id}", game
+        ActionCable.server.broadcast "game_channel_#{@gameId}",
+                                     {
+                                       game: {
+                                         flipСardsAutomatically: @game.flipСardsAutomatically,
+                                         historyPoll: @game.history_poll,
+                                         idPlayersResponded: @game.id_players_answers,
+                                         poll: @game.poll,
+                                       },
+                                     }
       end
     end
   rescue ActiveRecord::RecordNotFound
