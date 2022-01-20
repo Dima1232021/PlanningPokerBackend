@@ -3,100 +3,48 @@
 class GameController < ApplicationController
   before_action :findGame,
                 only: %i[
-                  joinTheGame
                   deleteInvited
                   startAPoll
                   flipCard
                   resetCards
                   addHistory
                   editHistory
-                  deleteHistory
-                  playerSettings
-                  changeCardFlipSettings
+                  changeDrivingSetings
+                  changeGameSettings
                 ]
-  before_action :findInvitaion, only: %i[joinTheGame playerSettings]
-  before_action :findAnswers, only: %i[joinTheGame]
+  before_action :findInvitaion, only: %i[changeDrivingSetings]
+
+  # before_action :findAnswers, only: %i[joinTheGame]
 
   def joinTheGame
-    @invitation.update(join_the_game: true)
+    urlGame = params['urlGame']
+    game = Game.find_by!(url: urlGame)
 
-    dataUsers(@game)
+    invitation = InvitationToTheGame.find_by(game_id: game.id, user_id: @current_user.id)
 
-    # ActionCable.server.broadcast "change_players_online_channel_#{@gameId}",
-    #                              {
-    #                                onlineUsers: @onlineUsers,
-    #                                onlinePlayers: @onlinePlayers,
-    #                              }
-
-    render json: {
-             joinTheGame: true,
-             gameId: @game.id,
-             driving: @game.driving,
-             nameGame: @game.name_game,
-             urlGame: @game.url,
-             game: {
-               flipСardsAutomatically: @game.flipСardsAutomatically,
-               historyPoll: @game.history_poll,
-               idPlayersResponded: @game.id_players_answers,
-               poll: @game.poll,
-             },
-             stories: @stories,
-             answers: @answers,
-             invitedUsers: @invitedUsers,
-             onlineUsers: @onlineUsers,
-             onlinePlayers: @onlinePlayers,
-           }
-  rescue ActiveRecord::RecordNotFound
-    render json: { join_the_game: false }
-  end
-
-  def deleteInvited
-    userId = params['userId']
-
-    if (@current_user.id == userId || @current_user.id == @game.driving['user_id']) &&
-         @game.driving['user_id'] != userId
-      invitation = InvitationToTheGame.find_by!(user_id: userId, game_id: @gameId)
-      invitation.destroy
-
-      dataUsers(@game)
-      ActionCable.server.broadcast "change_players_online_channel_#{@gameId}",
+    unless invitation
+      game.users << @current_user
+      invitation = InvitationToTheGame.find_by(game_id: game.id, user_id: @current_user.id)
+      ActionCable.server.broadcast "invitation_channel_#{@current_user.id}",
                                    {
-                                     invitedUsers: @invitedUsers,
-                                     onlineUsers: @onlineUsers,
-                                     onlinePlayers: @onlinePlayers,
+                                     id: game.id,
+                                     name_game: game.name_game,
+                                     url: game.url,
+                                     drivingName: game.driving['user_name'],
                                    }
-
-      ActionCable.server.broadcast "delete_invited_channel_#{userId}",
-                                   { invitationId: invitation.id }
     end
-  rescue ActiveRecord::RecordNotFound
-    render json: { delete_invited: false }
-  end
 
-  def leaveTheGame
-    invitation = InvitationToTheGame.find_by!(join_the_game: true, user_id: @current_user.id)
-    invitation.update(join_the_game: false)
-
-    # dataUsers(@game)
-    # ActionCable.server.broadcast "change_players_online_channel_#{@gameId}",
-    #                              { onlineUsers: @onlineUsers, onlinePlayers: @onlinePlayers }
-
-    render json: { leavetTheGame: true }
-  rescue ActiveRecord::RecordNotFound
-    render json: { leavet_he_game: false }
-  end
-
-  def findGameYouHaveJoined
-    invitation = InvitationToTheGame.find_by!(user_id: @current_user, join_the_game: true)
-
-    game = Game.find(invitation.game_id)
+    invitation.update(join_the_game: true)
 
     dataUsers(game)
 
-    stories = game.stories
+    stories = game.stories.select('stories.id, stories.body')
     answers = {}
-
     stories.map { |story| answers[story.id] = game.poll ? [] : story.answers }
+
+    ActionCable.server.broadcast "change_players_online_channel_#{game.id}",
+                                 { onlineUsers: @onlineUsers, onlinePlayers: @onlinePlayers }
+
     render json: {
              joinTheGame: true,
              gameId: game.id,
@@ -111,12 +59,50 @@ class GameController < ApplicationController
              },
              stories: stories,
              answers: answers,
-             invitedUsers: @invitedUsers,
              onlineUsers: @onlineUsers,
              onlinePlayers: @onlinePlayers,
            }
   rescue ActiveRecord::RecordNotFound
     render json: { join_the_game: false }
+  end
+
+  def deleteInvited
+    invitation = InvitationToTheGame.find_by!(user_id: @current_user.id, game_id: @gameId)
+    invitation.destroy
+
+    render json: { delete_invited: true }
+  rescue ActiveRecord::RecordNotFound
+    render json: { delete_invited: false }
+  end
+
+  def leaveTheGame
+    invitation = InvitationToTheGame.find_by!(join_the_game: true, user_id: @current_user.id)
+    game = Game.find(invitation.game_id)
+    invitation.update(join_the_game: false)
+
+    dataUsers(game)
+    ActionCable.server.broadcast "change_players_online_channel_#{game.id}",
+                                 { onlineUsers: @onlineUsers, onlinePlayers: @onlinePlayers }
+
+    render json: { leavetTheGame: true }
+  rescue ActiveRecord::RecordNotFound
+    render json: { leavet_he_game: false }
+  end
+
+  def findGameYouHaveJoined
+    invitation = InvitationToTheGame.find_by!(user_id: @current_user, join_the_game: true)
+
+    game = Game.find(invitation.game_id)
+
+    render json: {
+             gameYouHaveJoined: {
+               joinTheGame: true,
+               urlGame: game.url,
+               nameGame: game.name_game,
+             },
+           }
+  rescue ActiveRecord::RecordNotFound
+    render json: { gameYouHaveJoined: { joinTheGame: false } }
   end
 
   def startAPoll
@@ -219,27 +205,29 @@ class GameController < ApplicationController
     body = params['body']
     story = Story.find(storyId)
 
-    if @game.driving['user_id'] == @current_user.id
+    if @game.driving['user_id'] == @current_user.id && story.body != body
       story.update(body: body)
       stories = @game.stories
       ActionCable.server.broadcast "stories_channel_#{@gameId}", { stories: stories }
     end
   end
 
-  def deleteHistory
+  def removeStory
     storyId = params['storyId']
     story = Story.find(storyId)
+    game = Game.find(story.game_id)
 
-    if @game.driving['user_id'] == @current_user.id
+    if game.driving['user_id'] == @current_user.id
       story.destroy
-      stories = @game.stories
+      stories = game.stories.select('stories.id, stories.body')
       answers = {}
       stories.map { |story| answers[story.id] = story.answers }
-      ActionCable.server.broadcast "stories_channel_#{@gameId}",
+      ActionCable.server.broadcast "stories_channel_#{game.id}",
                                    { stories: stories, answers: answers }
     end
   end
-  def playerSettings
+
+  def changeDrivingSetings
     if @game.driving['user_id'] == @current_user.id && !@game.poll
       @invitation.update(player: !@invitation.player)
       dataUsers(@game)
@@ -248,10 +236,18 @@ class GameController < ApplicationController
                                    { onlineUsers: @onlineUsers, onlinePlayers: @onlinePlayers }
     end
   end
-  def changeCardFlipSettings
+  def changeGameSettings
     if @game.driving['user_id'] == @current_user.id
       @game.update(flipСardsAutomatically: !@game.flipСardsAutomatically)
-      ActionCable.server.broadcast "game_channel_#{@gameId}", @game
+      ActionCable.server.broadcast "game_channel_#{@gameId}",
+                                   {
+                                     game: {
+                                       flipСardsAutomatically: @game.flipСardsAutomatically,
+                                       historyPoll: @game.history_poll,
+                                       idPlayersResponded: @game.id_players_answers,
+                                       poll: @game.poll,
+                                     },
+                                   }
     end
   end
 
@@ -267,7 +263,6 @@ class GameController < ApplicationController
   end
 
   def dataUsers(game)
-    @invitedUsers = []
     @onlineUsers = []
     @onlinePlayers = []
 
@@ -277,8 +272,6 @@ class GameController < ApplicationController
         'users.id, users.username, invitation_to_the_games.join_the_game,invitation_to_the_games.player',
       )
       .map do |user|
-        @invitedUsers.push(id: user.id, username: user.username)
-
         user.join_the_game && @onlineUsers.push(id: user.id, username: user.username)
         user.join_the_game && user.player &&
           @onlinePlayers.push(id: user.id, username: user.username)

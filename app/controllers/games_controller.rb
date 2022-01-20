@@ -9,6 +9,14 @@ class GamesController < ApplicationController
       Game
         .joins(:invitation_to_the_games)
         .where("driving->>'user_id' != '?' AND invitation_to_the_games.user_id = ?", userId, userId)
+        .map do |game|
+          {
+            id: game.id,
+            name_game: game.name_game,
+            url: game.url,
+            drivingName: game.driving['user_name'],
+          }
+        end
 
     render json: { ownGames: ownGames, gamesInvitation: gamesInvitation }
   end
