@@ -2,19 +2,8 @@
 
 class GameController < ApplicationController
   before_action :findGame,
-                only: %i[
-                  deleteInvited
-                  startAPoll
-                  flipCard
-                  resetCards
-                  addHistory
-                  editHistory
-                  changeDrivingSetings
-                  changeGameSettings
-                ]
+                except: %i[joinTheGame leaveTheGame findGameYouHaveJoined giveAnAnswer removeStory]
   before_action :findInvitaion, only: %i[changeDrivingSetings]
-
-  # before_action :findAnswers, only: %i[joinTheGame]
 
   def joinTheGame
     urlGame = params['urlGame']
@@ -105,7 +94,7 @@ class GameController < ApplicationController
     render json: { gameYouHaveJoined: { joinTheGame: false } }
   end
 
-  def startAPoll
+  def startPoll
     storyId = params['storyId']
 
     story = Story.find(storyId)
@@ -236,6 +225,7 @@ class GameController < ApplicationController
                                    { onlineUsers: @onlineUsers, onlinePlayers: @onlinePlayers }
     end
   end
+
   def changeGameSettings
     if @game.driving['user_id'] == @current_user.id
       @game.update(flipСardsAutomatically: !@game.flipСardsAutomatically)
@@ -276,10 +266,5 @@ class GameController < ApplicationController
         user.join_the_game && user.player &&
           @onlinePlayers.push(id: user.id, username: user.username)
       end
-  end
-  def findAnswers
-    @stories = @game.stories
-    @answers = {}
-    @stories.map { |story| @answers[story.id] = @game.poll ? [] : story.answers }
   end
 end
