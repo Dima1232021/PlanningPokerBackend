@@ -140,16 +140,17 @@ class GameController < ApplicationController
     storyId = params['storyId']
     story = Story.find(storyId)
 
-    answers = story.answers
+    allAnswers = story.answers
 
-    if @game.driving['user_id'] == @current_user.id && answers.length != 0 && !@game.poll
-      answers.destroy_all
+    if @game.driving['user_id'] == @current_user.id && allAnswers.length != 0 && !@game.poll
+      allAnswers.destroy_all
 
       @game.update(history_poll: { id: story.id, body: story.body }, poll: true)
-      answer = { storyId => [] }
+      answers = { storyId => [] }
+      @game.stories.map { |story| answers[story.id] = [] }
       ActionCable.server.broadcast "answers_channel_#{@gameId}",
                                    {
-                                     answers: answer,
+                                     answers: answers,
                                      game: {
                                        flipСardsAutomatically: @game.flipСardsAutomatically,
                                        historyPoll: @game.history_poll,
@@ -241,7 +242,8 @@ class GameController < ApplicationController
     body = params['body']
     story = Story.find(storyId)
 
-    if @game.driving['user_id'] == @current_user.id && story.body != body
+    if @game.driving['user_id'] == @current_user.id && story.body != body &&
+         @game.history_poll['id'] != storyId
       story.update(body: body)
       stories = @game.stories
       ActionCable.server.broadcast "stories_channel_#{@gameId}", { stories: stories }
@@ -253,7 +255,7 @@ class GameController < ApplicationController
     story = Story.find(storyId)
     game = Game.find(story.game_id)
 
-    if game.driving['user_id'] == @current_user.id
+    if game.driving['user_id'] == @current_user.id && game.history_poll['id'] != storyId
       story.destroy
       stories = game.stories.select('stories.id, stories.body')
       answers = {}
@@ -265,7 +267,8 @@ class GameController < ApplicationController
 
   # слідуючі 2 блоки описують функціонал: зміни настройок автоматичного перевертання карт і зміни приймання участі у грі ведучого
   def changeDrivingSetings
-    if @game.driving['user_id'] == @current_user.id && !@game.poll
+    if @game.driving['user_id'] == @current_user.id
+      # && !@game.poll
       @invitation.update(player: !@invitation.player)
       dataUsers(@game)
 
