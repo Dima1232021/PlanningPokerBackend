@@ -103,7 +103,9 @@ class GameController < ApplicationController
 
     answers = story.answers.length
 
-    if @game.driving['user_id'] == @current_user.id && answers == 0
+    findPlayers = InvitationToTheGame.where(game_id: @gameId, player: true)
+
+    if @game.driving['user_id'] == @current_user.id && answers == 0 && findPlayers.size != 0
       @game.update(history_poll: { id: story.id, body: story.body }, poll: true)
       ActionCableGameChannel()
     end
@@ -123,7 +125,10 @@ class GameController < ApplicationController
 
     allAnswers = story.answers
 
-    if @game.driving['user_id'] == @current_user.id && allAnswers.length != 0 && !@game.poll
+    findPlayers = InvitationToTheGame.where(game_id: @gameId, player: true)
+
+    if @game.driving['user_id'] == @current_user.id && allAnswers.length != 0 && !@game.poll &&
+         findPlayers.size != 0
       allAnswers.destroy_all
 
       @game.update(history_poll: { id: story.id, body: story.body }, poll: true)
