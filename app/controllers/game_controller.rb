@@ -41,7 +41,6 @@ class GameController < ApplicationController
              nameGame: game.name_game,
              urlGame: game.url,
              game: {
-               flipСardsAutomatically: game.flipСardsAutomatically,
                historyPoll: game.history_poll,
                idPlayersResponded: game.id_players_answers,
                poll: game.poll,
@@ -50,6 +49,8 @@ class GameController < ApplicationController
              answers: answers,
              onlineUsers: @onlineUsers,
              onlinePlayers: @onlinePlayers,
+             statusChange: game.statusChange,
+             flipСardsAutomatically: game.flipСardsAutomatically,
            }
   rescue ActiveRecord::RecordNotFound
     render json: { join_the_game: false }
@@ -104,15 +105,7 @@ class GameController < ApplicationController
 
     if @game.driving['user_id'] == @current_user.id && answers == 0
       @game.update(history_poll: { id: story.id, body: story.body }, poll: true)
-      ActionCable.server.broadcast "game_channel_#{@gameId}",
-                                   {
-                                     game: {
-                                       flipСardsAutomatically: @game.flipСardsAutomatically,
-                                       historyPoll: @game.history_poll,
-                                       idPlayersResponded: @game.id_players_answers,
-                                       poll: @game.poll,
-                                     },
-                                   }
+      ActionCableGameChannel()
     end
   end
 
@@ -120,19 +113,7 @@ class GameController < ApplicationController
     if @game.driving['user_id'] == @current_user.id && @game.poll
       @game.update(history_poll: {}, poll: false, id_players_answers: [])
 
-      stories = @game.stories
-      answers = {}
-      stories.map { |story| answers[story.id] = story.answers }
-      ActionCable.server.broadcast "answers_channel_#{@gameId}",
-                                   {
-                                     answers: answers,
-                                     game: {
-                                       flipСardsAutomatically: @game.flipСardsAutomatically,
-                                       historyPoll: @game.history_poll,
-                                       idPlayersResponded: @game.id_players_answers,
-                                       poll: @game.poll,
-                                     },
-                                   }
+      ActionCableAnswersChannel(@game.stories)
     end
   end
 
@@ -146,27 +127,14 @@ class GameController < ApplicationController
       allAnswers.destroy_all
 
       @game.update(history_poll: { id: story.id, body: story.body }, poll: true)
-      answers = { storyId => [] }
-      @game.stories.map { |story| answers[story.id] = [] }
-      ActionCable.server.broadcast "answers_channel_#{@gameId}",
-                                   {
-                                     answers: answers,
-                                     game: {
-                                       flipСardsAutomatically: @game.flipСardsAutomatically,
-                                       historyPoll: @game.history_poll,
-                                       idPlayersResponded: @game.id_players_answers,
-                                       poll: @game.poll,
-                                     },
-                                   }
+
+      ActionCableAnswersChannel(@game.stories)
     end
   end
 
   # слідуючий  блок описує функціонал: запису відповіді
   def giveAnAnswer
     fibonacci = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 'pass']
-
-    # gameId = params['gameId']
-    # game = Game.find(gameId)
 
     # шукаю всіх гравців гри
     players = InvitationToTheGame.where(game_id: @gameId, join_the_game: true, player: true)
@@ -177,7 +145,7 @@ class GameController < ApplicationController
     # шукаю всі ІД гравців які дали відповідь
     findIdWhoGivenAnswer = @game.id_players_answers
 
-    # шукаю  ІД поточного гравця
+    # шукаю  ІД поточного гравця щоб зрозуміти чи давав він відповідь
     findIdPlayer = findIdWhoGivenAnswer.find { |id| id == @current_user.id }
 
     # перевіряю на правельність відповіді і чи не давав поточний гравець відповіді
@@ -192,36 +160,14 @@ class GameController < ApplicationController
       @game.id_players_answers.push(@current_user.id)
       @game.save
 
-      #  перевіряю чи ведучий хоче автоматичне перевернення карт якщо да то то перевіряю чи всі гравці  дали відповідь
+      #  перевіряю чи ведучий хоче автоматичне перевернення карт якщо да то перевіряю чи всі гравці  дали відповідь
       if @game.flipСardsAutomatically && players.size == findIdWhoGivenAnswer.size
         @game.update(history_poll: {}, poll: false, id_players_answers: [])
-        stories = @game.stories
-        answers = {}
-        stories.map { |story| answers[story.id] = story.answers }
-        ActionCable.server.broadcast "answers_channel_#{@gameId}",
-                                     {
-                                       answers: answers,
-                                       game: {
-                                         flipСardsAutomatically: @game.flipСardsAutomatically,
-                                         historyPoll: @game.history_poll,
-                                         idPlayersResponded: @game.id_players_answers,
-                                         poll: @game.poll,
-                                       },
-                                     }
+        ActionCableAnswersChannel(@game.stories)
       else
-        ActionCable.server.broadcast "game_channel_#{@gameId}",
-                                     {
-                                       game: {
-                                         flipСardsAutomatically: @game.flipСardsAutomatically,
-                                         historyPoll: @game.history_poll,
-                                         idPlayersResponded: @game.id_players_answers,
-                                         poll: @game.poll,
-                                       },
-                                     }
+        ActionCableGameChannel()
       end
     end
-  rescue ActiveRecord::RecordNotFound
-    render json: { giveAnAnswer: false }
   end
 
   # слідуючі 3 блоки описують функціонал: створення, редагування та видалення історії для гри
@@ -265,30 +211,35 @@ class GameController < ApplicationController
     end
   end
 
-  # слідуючі 2 блоки описують функціонал: зміни настройок автоматичного перевертання карт і зміни приймання участі у грі ведучого
-  def changeDrivingSetings
+  # слідуючі 3 блоки описують функціонал: зміни настройок автоматичного перевертання карт і зміни приймання участі у грі та зміна дозволу приймання участі у грі
+
+  def changeGameSettingsAutoFlipCards
     if @game.driving['user_id'] == @current_user.id
-      # && !@game.poll
-      @invitation.update(player: !@invitation.player)
+      @game.update(flipСardsAutomatically: !@game.flipСardsAutomatically)
+
+      ActionCable.server.broadcast "setings_game_channel_#{@gameId}",
+                                   { flipСardsAutomatically: @game.flipСardsAutomatically }
+    end
+  end
+
+  def changeGameSettingsStatusChange
+    if @game.driving['user_id'] == @current_user.id
+      @game.update(statusChange: !@game.statusChange)
+
+      ActionCable.server.broadcast "setings_game_channel_#{@gameId}",
+                                   { statusChange: @game.statusChange }
+    end
+  end
+
+  def changeStatusUser
+    userId = params['userId']
+    if @game.driving['user_id'] == @current_user.id || userId == @current_user.id
+      invitation = InvitationToTheGame.find_by!(user_id: userId, game_id: @gameId)
+      invitation.update(player: !invitation.player)
       dataUsers(@game)
 
       ActionCable.server.broadcast "change_players_online_channel_#{@gameId}",
                                    { onlineUsers: @onlineUsers, onlinePlayers: @onlinePlayers }
-    end
-  end
-
-  def changeGameSettings
-    if @game.driving['user_id'] == @current_user.id
-      @game.update(flipСardsAutomatically: !@game.flipСardsAutomatically)
-      ActionCable.server.broadcast "game_channel_#{@gameId}",
-                                   {
-                                     game: {
-                                       flipСardsAutomatically: @game.flipСardsAutomatically,
-                                       historyPoll: @game.history_poll,
-                                       idPlayersResponded: @game.id_players_answers,
-                                       poll: @game.poll,
-                                     },
-                                   }
     end
   end
 
@@ -313,9 +264,35 @@ class GameController < ApplicationController
         'users.id, users.username, invitation_to_the_games.join_the_game,invitation_to_the_games.player',
       )
       .map do |user|
-        user.join_the_game && @onlineUsers.push(id: user.id, username: user.username)
+        user.join_the_game &&
+          @onlineUsers.push(id: user.id, username: user.username, player: user.player)
         user.join_the_game && user.player &&
           @onlinePlayers.push(id: user.id, username: user.username)
       end
+  end
+
+  def ActionCableGameChannel
+    ActionCable.server.broadcast "game_channel_#{@gameId}",
+                                 {
+                                   game: {
+                                     historyPoll: @game.history_poll,
+                                     idPlayersResponded: @game.id_players_answers,
+                                     poll: @game.poll,
+                                   },
+                                 }
+  end
+
+  def ActionCableAnswersChannel(stories)
+    answers = {}
+    stories.map { |story| answers[story.id] = story.answers }
+    ActionCable.server.broadcast "answers_channel_#{@gameId}",
+                                 {
+                                   answers: answers,
+                                   game: {
+                                     historyPoll: @game.history_poll,
+                                     idPlayersResponded: @game.id_players_answers,
+                                     poll: @game.poll,
+                                   },
+                                 }
   end
 end

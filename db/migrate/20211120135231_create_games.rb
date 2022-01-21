@@ -10,6 +10,7 @@ class CreateGames < ActiveRecord::Migration[6.1]
       t.integer :id_players_answers, array: true, default: []
       t.boolean :poll, default: false
       t.boolean :flipСardsAutomatically, default: false
+      t.boolean :statusChange, default: false
 
       t.timestamps
     end

@@ -34,6 +34,7 @@ ActiveRecord::Schema.define(version: 2021_12_08_112715) do
     t.integer "id_players_answers", default: [], array: true
     t.boolean "poll", default: false
     t.boolean "flipСardsAutomatically", default: false
+    t.boolean "statusChange", default: false
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
   end
