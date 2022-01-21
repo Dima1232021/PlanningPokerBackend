@@ -26,31 +26,18 @@ class GameController < ApplicationController
     invitation.update(join_the_game: true)
 
     dataUsers(game)
+    ActionCableDataUsersChannel(game.id)
 
     stories = game.stories.select('stories.id, stories.body')
     answers = {}
     stories.map { |story| answers[story.id] = game.poll ? [] : story.answers }
 
-    ActionCable.server.broadcast "change_players_online_channel_#{game.id}",
-                                 { onlineUsers: @onlineUsers, onlinePlayers: @onlinePlayers }
-
     render json: {
              joinTheGame: true,
-             gameId: game.id,
-             driving: game.driving,
-             nameGame: game.name_game,
-             urlGame: game.url,
-             game: {
-               historyPoll: game.history_poll,
-               idPlayersResponded: game.id_players_answers,
-               poll: game.poll,
-             },
              stories: stories,
              answers: answers,
              onlineUsers: @onlineUsers,
-             onlinePlayers: @onlinePlayers,
-             statusChange: game.statusChange,
-             flipСardsAutomatically: game.flipСardsAutomatically,
+             game: game,
            }
   rescue ActiveRecord::RecordNotFound
     render json: { join_the_game: false }
@@ -71,8 +58,8 @@ class GameController < ApplicationController
     invitation.update(join_the_game: false)
 
     dataUsers(game)
-    ActionCable.server.broadcast "change_players_online_channel_#{game.id}",
-                                 { onlineUsers: @onlineUsers, onlinePlayers: @onlinePlayers }
+
+    ActionCableDataUsersChannel(game.id)
 
     render json: { leavetTheGame: true }
   rescue ActiveRecord::RecordNotFound
@@ -166,7 +153,7 @@ class GameController < ApplicationController
       @game.save
 
       #  перевіряю чи ведучий хоче автоматичне перевернення карт якщо да то перевіряю чи всі гравці  дали відповідь
-      if @game.flipСardsAutomatically && players.size == findIdWhoGivenAnswer.size
+      if @game.flipСardsAutomatically && players.size <= findIdWhoGivenAnswer.size
         @game.update(history_poll: {}, poll: false, id_players_answers: [])
         ActionCableAnswersChannel(@game.stories)
       else
@@ -243,8 +230,7 @@ class GameController < ApplicationController
       invitation.update(player: !invitation.player)
       dataUsers(@game)
 
-      ActionCable.server.broadcast "change_players_online_channel_#{@gameId}",
-                                   { onlineUsers: @onlineUsers, onlinePlayers: @onlinePlayers }
+      ActionCableDataUsersChannel(@gameId)
     end
   end
 
@@ -261,7 +247,6 @@ class GameController < ApplicationController
 
   def dataUsers(game)
     @onlineUsers = []
-    @onlinePlayers = []
 
     game
       .users
@@ -271,8 +256,6 @@ class GameController < ApplicationController
       .map do |user|
         user.join_the_game &&
           @onlineUsers.push(id: user.id, username: user.username, player: user.player)
-        user.join_the_game && user.player &&
-          @onlinePlayers.push(id: user.id, username: user.username)
       end
   end
 
@@ -290,6 +273,7 @@ class GameController < ApplicationController
   def ActionCableAnswersChannel(stories)
     answers = {}
     stories.map { |story| answers[story.id] = story.answers }
+
     ActionCable.server.broadcast "answers_channel_#{@gameId}",
                                  {
                                    answers: answers,
@@ -299,5 +283,9 @@ class GameController < ApplicationController
                                      poll: @game.poll,
                                    },
                                  }
+  end
+
+  def ActionCableDataUsersChannel(gameId)
+    ActionCable.server.broadcast "data_users_channel_#{gameId}", { onlineUsers: @onlineUsers }
   end
 end
