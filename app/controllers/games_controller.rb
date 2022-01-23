@@ -59,15 +59,12 @@ class GamesController < ApplicationController
     if @game.driving['user_id'] == @current_user.id
       @game.invitation_to_the_games.each do |inv|
         if @game.driving['user_id'] != inv.user_id
-          ActionCable.server.broadcast "delete_invited_channel_#{inv.user_id}",
-                                       { invitationId: inv['id'] }
+          ActionCable.server.broadcast "delete_game_channel_#{inv.user_id}", { gameId: @gameId }
         end
       end
 
       @game.destroy
       render json: { delete_game: true }
-    else
-      render json: { delete_game: false }
     end
   end
 

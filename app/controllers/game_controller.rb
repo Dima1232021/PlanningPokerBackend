@@ -40,7 +40,7 @@ class GameController < ApplicationController
              game: game,
            }
   rescue ActiveRecord::RecordNotFound
-    render json: { join_the_game: false }
+    render json: { joinTheGame: false }
   end
 
   def deleteInvited
@@ -56,6 +56,8 @@ class GameController < ApplicationController
     invitation = InvitationToTheGame.find_by!(join_the_game: true, user_id: @current_user.id)
     game = Game.find(invitation.game_id)
     invitation.update(join_the_game: false)
+
+    checkFlipСardsAutomatically(game)
 
     dataUsers(game)
 
@@ -209,6 +211,8 @@ class GameController < ApplicationController
     if @game.driving['user_id'] == @current_user.id
       @game.update(flipСardsAutomatically: !@game.flipСardsAutomatically)
 
+      checkFlipСardsAutomatically(@game)
+
       ActionCable.server.broadcast "setings_game_channel_#{@gameId}",
                                    { flipСardsAutomatically: @game.flipСardsAutomatically }
     end
@@ -229,6 +233,8 @@ class GameController < ApplicationController
       invitation = InvitationToTheGame.find_by!(user_id: userId, game_id: @gameId)
       invitation.update(player: !invitation.player)
       dataUsers(@game)
+
+      checkFlipСardsAutomatically(@game)
 
       ActionCableDataUsersChannel(@gameId)
     end
@@ -287,5 +293,28 @@ class GameController < ApplicationController
 
   def ActionCableDataUsersChannel(gameId)
     ActionCable.server.broadcast "data_users_channel_#{gameId}", { onlineUsers: @onlineUsers }
+  end
+
+  def checkFlipСardsAutomatically(game)
+    if game.flipСardsAutomatically
+      players = InvitationToTheGame.where(game_id: game.id, join_the_game: true, player: true)
+      findIdWhoGivenAnswer = game.id_players_answers
+
+      if players.size <= findIdWhoGivenAnswer.size
+        game.update(history_poll: {}, poll: false, id_players_answers: [])
+        answers = {}
+        game.stories.map { |story| answers[story.id] = story.answers }
+
+        ActionCable.server.broadcast "answers_channel_#{game.id}",
+                                     {
+                                       answers: answers,
+                                       game: {
+                                         historyPoll: game.history_poll,
+                                         idPlayersResponded: game.id_players_answers,
+                                         poll: game.poll,
+                                       },
+                                     }
+      end
+    end
   end
 end
