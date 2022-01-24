@@ -2,7 +2,6 @@
 
 class GameController < ApplicationController
   before_action :findGame, except: %i[joinTheGame leaveTheGame findGameYouHaveJoined removeStory]
-  before_action :findInvitaion, only: %i[changeDrivingSetings]
 
   # слідуючі 4 блоки описують функціонал: приєднання та виходу із гри, видалиння та пошуку запрошення до гри
   def joinTheGame
@@ -28,14 +27,12 @@ class GameController < ApplicationController
     dataUsers(game)
     ActionCableDataUsersChannel(game.id)
 
-    stories = game.stories.select('stories.id, stories.body')
-    answers = {}
-    stories.map { |story| answers[story.id] = game.poll ? [] : story.answers }
+    findAnswers(game)
 
     render json: {
              joinTheGame: true,
-             stories: stories,
-             answers: answers,
+             stories: @stories,
+             answers: @answers,
              onlineUsers: @onlineUsers,
              game: game,
            }
@@ -104,7 +101,7 @@ class GameController < ApplicationController
     if @game.driving['user_id'] == @current_user.id && @game.poll
       @game.update(history_poll: {}, poll: false, id_players_answers: [])
 
-      ActionCableAnswersChannel(@game.stories)
+      ActionCableAnswersChannel(@game)
     end
   end
 
@@ -122,7 +119,7 @@ class GameController < ApplicationController
 
       @game.update(history_poll: { id: story.id, body: story.body }, poll: true)
 
-      ActionCableAnswersChannel(@game.stories)
+      ActionCableAnswersChannel(@game)
     end
   end
 
@@ -157,7 +154,7 @@ class GameController < ApplicationController
       #  перевіряю чи ведучий хоче автоматичне перевернення карт якщо да то перевіряю чи всі гравці  дали відповідь
       if @game.flipСardsAutomatically && players.size <= findIdWhoGivenAnswer.size
         @game.update(history_poll: {}, poll: false, id_players_answers: [])
-        ActionCableAnswersChannel(@game.stories)
+        ActionCableAnswersChannel(@game)
       else
         ActionCableGameChannel()
       end
@@ -169,11 +166,9 @@ class GameController < ApplicationController
     body = params['body']
     if @game.driving['user_id'] == @current_user.id
       @game.stories.build(body: body).save
-      stories = @game.stories
-      answers = {}
-      stories.map { |story| answers[story.id] = story.answers }
+      findAnswers(@game)
       ActionCable.server.broadcast "stories_channel_#{@gameId}",
-                                   { stories: stories, answers: answers }
+                                   { stories: @stories, answers: @answers }
     end
   end
 
@@ -197,11 +192,9 @@ class GameController < ApplicationController
 
     if game.driving['user_id'] == @current_user.id && game.history_poll['id'] != storyId
       story.destroy
-      stories = game.stories.select('stories.id, stories.body')
-      answers = {}
-      stories.map { |story| answers[story.id] = story.answers }
+      findAnswers(game)
       ActionCable.server.broadcast "stories_channel_#{game.id}",
-                                   { stories: stories, answers: answers }
+                                   { stories: @stories, answers: @answers }
     end
   end
 
@@ -247,8 +240,12 @@ class GameController < ApplicationController
     @game = Game.find(@gameId)
   end
 
-  def findInvitaion
-    @invitation = InvitationToTheGame.find_by!(game_id: @gameId, user_id: @current_user.id)
+  def findAnswers(game)
+    @stories = game.stories.select('stories.id, stories.body')
+    @answers = {}
+    @stories.map do |story|
+      @answers[story.id] = story.answers.select('answers.id, answers.body,  answers.user_name')
+    end
   end
 
   def dataUsers(game)
@@ -276,17 +273,16 @@ class GameController < ApplicationController
                                  }
   end
 
-  def ActionCableAnswersChannel(stories)
-    answers = {}
-    stories.map { |story| answers[story.id] = story.answers }
+  def ActionCableAnswersChannel(game)
+    findAnswers(game)
 
-    ActionCable.server.broadcast "answers_channel_#{@gameId}",
+    ActionCable.server.broadcast "answers_channel_#{game.id}",
                                  {
-                                   answers: answers,
+                                   answers: @answers,
                                    game: {
-                                     historyPoll: @game.history_poll,
-                                     idPlayersResponded: @game.id_players_answers,
-                                     poll: @game.poll,
+                                     historyPoll: game.history_poll,
+                                     idPlayersResponded: game.id_players_answers,
+                                     poll: game.poll,
                                    },
                                  }
   end

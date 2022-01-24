@@ -30,6 +30,7 @@ class GamesController < ApplicationController
     stories = params['stories']
     player = params['player']
     autoFlip = params['autoFlip']
+    statusChange = params['statusChange']
 
     createUrl = ''
     characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
@@ -40,6 +41,7 @@ class GamesController < ApplicationController
         url: createUrl,
         name_game: nameGame,
         flipСardsAutomatically: autoFlip,
+        statusChange: statusChange,
         driving: {
           user_id: @current_user.id,
           user_name: @current_user.username,
