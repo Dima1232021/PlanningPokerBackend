@@ -2,8 +2,8 @@
 
 class StoriesChannel < ApplicationCable::Channel
   def subscribed
-    gameId = params['gameId']
-    stream_from "stories_channel_#{gameId}"
+    game_id = params['game_id']
+    stream_from "stories_channel_#{game_id}"
   end
 
   def unsubscribed
