@@ -31,15 +31,6 @@ module Backend
                           same_site: :None,
                           secure: true
 
-    # config.middleware.insert_after(
-    #   ActionDispatch::Cookies,
-    #   ActionDispatch::Session::CookieStore,
-    #   key: '_authentication_app',
-    #   path: '/',
-    #   same_site: :None,
-    #   secure: true,
-    # )
-
     # config.hosts << 'devserver.test'
   end
 end

@@ -1,9 +1,7 @@
-# frozen_string_literal: true
-
-class StoriesChannel < ApplicationCable::Channel
+class DataUsersChannel < ApplicationCable::Channel
   def subscribed
     gameId = params['gameId']
-    stream_from "stories_channel_#{gameId}"
+    stream_from "data_users_channel_#{gameId}"
   end
 
   def unsubscribed
