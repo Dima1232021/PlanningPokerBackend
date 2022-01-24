@@ -31,6 +31,6 @@ module Backend
                           same_site: :None,
                           secure: true
 
-    config.hosts << 'devserver.test'
+    # config.hosts << 'devserver.test'
   end
 end
